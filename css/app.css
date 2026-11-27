@@ -331,3 +331,8 @@ body.aluno .pgcard{display:none}
 .tsscore{display:flex;gap:28px;margin:6px 0 16px}.tsscore div{display:flex;flex-direction:column}
 .tsscore .mono{font-size:34px;font-weight:600;color:var(--ink)}.tsscore small{color:var(--muted)}
 @media (max-width:1000px){.tsgrid{grid-template-columns:1fr}.tsrooms{flex-direction:row;overflow-x:auto}.troom{min-width:240px}.tfgrid,.tsf{grid-template-columns:1fr}}
+
+.pickbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:18px}
+.pcard .ref{font-size:11.5px;color:var(--cyan)}
+.refbox{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.refbox p{max-width:70ch;margin:4px 0 0}

@@ -6,6 +6,8 @@ const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[
 
 class LabourSim{
   constructor(cs,opts={}){
+    /* cópia própria dos parâmetros: os eventos de um caso podem mudá-los sem afetar a próxima simulação */
+    cs={...cs,fet:{...cs.fet},start:{...cs.start},mat:{...cs.mat}};
     this.cs=cs;this.mode=opts.mode||'formacao';const f=cs.fet,s0=cs.start;
     this.st={dil:s0.dil,station:s0.station,pos:s0.pos,membr:s0.membr,liquido:s0.liquido,analgesia:s0.analgesia,oxy:s0.oxy,posicao:'semi',
       pushing:false,fullAt:s0.dil>=10?0:null,pushAcc:0,pushStart:null,tas:cs.mat.tas,tad:cs.mat.tad,fcm:cs.mat.fc,temp:cs.mat.temp,spo2:cs.mat.spo2,
@@ -165,7 +167,7 @@ class LabourSim{
   rupture(spont){
     const st=this.st;st.membr='rotas';st.liquido='claro, abundante';
     this.msg('Enf.ª',spont?'Rotura espontânea de membranas: saída abundante de líquido claro.':'Amniotomia realizada: saída abundante de líquido claro.');
-    if(this.cs.id==='ines'&&!this.flags.prolapso){this.flags.prolapso=1;this.e.at(40,()=>this.startAcute('prolapso'))}
+    if((this.cs.id==='ines'||this.cs.prolapseRisk)&&!this.flags.prolapso){this.flags.prolapso=1;this.e.at(40,()=>this.startAcute('prolapso'))}
   }
   decide(kind){
     const tm=this.tmin(),fl=this.flags;let eta;
@@ -342,7 +344,7 @@ class LabourSim{
       case 'oxy_stop':st.oxy=0;st.oxyStopAt=tm;this.flags.oxyTouched=1;txt='Perfusão de ocitocina suspensa.';break;
       case 'fluidos':st.fluids+=500;txt='Bólus de 500 mL de lactato de Ringer em curso.';if(st.hypo)e.at(150,()=>{st.tas+=11;st.tad+=6});break;
       case 'vaso':txt='Efedrina 6 mg IV administrada pela anestesiologia.';if(st.hypo)e.at(80,()=>{st.tas=Math.max(st.tas,108);st.tad=Math.max(st.tad,64)});else{st.tas=Math.min(165,st.tas+28);st.tad+=14}break;
-      case 'terb':st.tocoUntil=tm+25;st.terbUntil=tm+30;txt='Terbutalina 0,25 mg SC. Efeito esperado em 2–5 min; a FC materna vai subir.';
+      case 'terb':st.tocoUntil=tm+25;st.terbUntil=tm+30;if(cs.on&&cs.on.terb)cs.on.terb(this);txt='Terbutalina 0,25 mg SC. Efeito esperado em 2–5 min; a FC materna vai subir.';
         if(A&&A.cause==='hipertonia'&&!A.resolved)e.at(150,()=>{if(this.acute===A&&!A.resolved){A.resolved=this.tmin();e.recover(30)}});break;
       case 'paracet':st.paraUntil=tm+360;txt='Paracetamol 1 g IV.';break;
       case 'abx':st.abx=true;txt='Antibioterapia IV iniciada conforme o protocolo de infeção intra-amniótica.';break;

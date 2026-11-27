@@ -17,11 +17,17 @@ $('mClose').onclick=closeModal;
 /* ===================== SALA DE PARTOS ===================== */
 const W={sim:null,cs:null,run:false,speed:30,acc:0,win:20,back:0,feedN:-1,mode:'formacao',pauseOnMsg:true,lastUI:0,wasRun:false};
 function difCls(d){return d==='Básico'?'b':d==='Intermédio'?'i':'a'}
+let wDif=store('ctg-dif')||'all';
 function renderPick(){
   const hist=store('ctg-hist')||[];
-  $('wCases').innerHTML=CASES.map(c=>{const best=hist.filter(h=>h.id===c.id).reduce((m,h)=>Math.max(m,h.score),-1);
-    return`<button class="pcard" data-id="${c.id}"><span class="nm">${esc(c.nome)}</span><span class="meta">${c.idade} anos · ${c.gp} · ${c.ig} sem</span><span class="tg">${esc(c.tag)}</span><span class="foot"><span class="dif ${difCls(c.dif)}">${c.dif}</span><span class="best">${best>=0?'Melhor: '+best+'/100':'Por fazer'}</span></span></button>`}).join('');
+  document.querySelectorAll('#wDif button').forEach(b=>b.classList.toggle('on',b.dataset.d===wDif));
+  const L=CASES.filter(c=>wDif==='all'||c.dif===wDif),done=L.filter(c=>hist.some(h=>h.id===c.id)).length;
+  $('wCount').textContent=`${L.length} casos · ${done} já feitos`;
+  $('wCases').innerHTML=L.map(c=>{const best=hist.filter(h=>h.id===c.id).reduce((m,h)=>Math.max(m,h.score),-1);
+    return`<button class="pcard" data-id="${c.id}"><span class="nm">${esc(c.nome)}</span><span class="meta">${c.idade} anos · ${c.gp} · ${c.ig} sem</span><span class="tg">${esc(c.tag)}</span>${c.ref?`<span class="ref mono">Registo real ${c.ref}</span>`:''}<span class="foot"><span class="dif ${difCls(c.dif)}">${c.dif}</span><span class="best">${best>=0?'Melhor: '+best+'/100':'Por fazer'}</span></span></button>`}).join('');
 }
+$('wDif').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;wDif=b.dataset.d;store('ctg-dif',wDif);renderPick()};
+function openRealRec(id){location.hash='reais';const go=()=>{if(typeof realInit!=='undefined'&&realInit){setRealMode('lib');openReal(id);window.scrollTo({top:0})}else setTimeout(go,150)};setTimeout(go,50)}
 $('wCases').onclick=ev=>{const b=ev.target.closest('.pcard');if(b)wStart(b.dataset.id)};
 document.querySelectorAll('input[name=wMode]').forEach(r=>r.onchange=()=>{W.mode=document.querySelector('input[name=wMode]:checked').value;$('wModeTxt').textContent=W.mode==='formacao'?'Formação: comentário imediato a cada ação e revisão.':'Avaliação: sem comentários durante o caso; tudo é analisado no fim.'});
 $('wPauseOpt').onchange=e=>W.pauseOnMsg=e.target.checked;
@@ -188,6 +194,7 @@ function showDebrief(){
      <div class="card dsec"><h3>Atuação recomendada</h3><ul>${cs.ideal.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
      <div class="card dsec"><h3>Pontos de ensino</h3><ul>${cs.teach.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
    </div>
+   ${cs.ref?`<div class="card dsec refbox"><div><h3>Registo real de origem</h3><p class="small">Este caso foi construído a partir do padrão do registo n.º ${cs.ref} da base CTU-UHB (Brno). O nome, a história e as horas são fictícios; a forma do traçado e o contexto clínico seguem o original. Compare o seu resultado com o que aconteceu de facto.</p></div><button class="btn" id="dbRef">Abrir o registo ${cs.ref}</button></div>`:''}
    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn pri" id="dbAgain">Repetir este caso</button><button class="btn" id="dbOther">Escolher outro caso</button></div>`;
   $('wDeb').style.display='';
   const pxm=22,wpx=Math.max(900,(dur+20)*pxm);
@@ -195,7 +202,7 @@ function showDebrief(){
   const bands=[];ev.evals.forEach(x=>{if(x.figo==='P'||x.figo==='S')bands.push({s:sim.t0+x.tm*60-75,e:sim.t0+x.tm*60+75,col:x.figo==='P'?'rgba(194,59,50,.13)':'rgba(194,122,18,.10)'})});
   drawCTG(cl,sim.e,{tEnd:sim.e.t,win:sim.e.t-Math.max(0,sim.t0-20*60),clock:t=>sim.clock(t),marks:true,labEvery:600,bands,trueF:!!cs.fet.mhrCapture});
   drawPH(cp,sim);
-  $('dbAgain').onclick=()=>wStart(cs.id);$('dbOther').onclick=()=>{$('wDeb').style.display='none';$('wPick').style.display='';renderPick()};
+  $('dbAgain').onclick=()=>wStart(cs.id);if(cs.ref)$('dbRef').onclick=()=>openRealRec(cs.ref);$('dbOther').onclick=()=>{$('wDeb').style.display='none';$('wPick').style.display='';renderPick()};
   window.scrollTo({top:0});
 }
 function drawPH(cv,sim){

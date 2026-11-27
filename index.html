@@ -101,6 +101,7 @@
       </div>
     </div>
     <div class="card shiftcard"><div><span class="mn mono">Novo</span><h2>Turno no bloco de partos</h2><p>Três salas ao mesmo tempo, durante duas horas e meia de turno. As mensagens não param o tempo, há interrupções, uma passagem de turno em formato SBAR e revisões com olhos frescos. No fim vê como cuidou de cada sala e onde a atenção falhou.</p></div><button class="cta pri" id="tsGo" type="button">Começar turno</button></div>
+    <div class="pickbar"><div class="seg" id="wDif"><button data-d="all" class="on">Todos</button><button data-d="Básico">Básico</button><button data-d="Intermédio">Intermédio</button><button data-d="Avançado">Avançado</button></div><span class="small" id="wCount"></span></div>
     <div class="cases" id="wCases"></div>
   </div>
 
@@ -353,7 +354,7 @@
       <h2>Sobre esta plataforma</h2>
       <p>Plataforma de treino e autoavaliação em vigilância fetal intraparto, para estudo individual, ensino em grupo e avaliação de competências. Junta a classificação por padrões (FIGO 2015, ACOG 2025, NICE NG229), a interpretação fisiológica do CTG e traçados reais com desfecho neonatal conhecido.</p>
       <p><b>Estado da revisão clínica:</b> por validar. Os casos, os critérios de avaliação e os parâmetros do modelo devem ser revistos por profissionais de obstetrícia antes de qualquer uso formal de avaliação.</p>
-      <p class="small">Versão 7 · novembro de 2026. As doentes da Sala de partos e os traçados do Treino rápido são fictícios. O separador «Traçados reais» usa registos reais anonimizados da base pública CTU-UHB (Brno, 2010–2012), com o respetivo desfecho neonatal.</p>
+      <p class="small">Versão 8 · novembro de 2026. As doentes da Sala de partos e os traçados do Treino rápido são fictícios; 20 dos 31 casos seguem o padrão e o contexto clínico de um registo real da base CTU-UHB, indicado no relatório final. O separador «Traçados reais» usa registos reais anonimizados da base pública CTU-UHB (Brno, 2010–2012), com o respetivo desfecho neonatal.</p>
     </div>
     <div class="card notes">
       <h3>Como funciona o simulador</h3>
@@ -363,6 +364,7 @@
         <li><b>Desfecho:</b> pH da artéria umbilical, défice de bases, lactato e Apgar são derivados do pH final por relações aproximadas.</li>
         <li><b>Caso em tempo real (traçados reais):</b> o registo avança e para aos 20 minutos e depois de 15 em 15; em cada paragem regista a classificação, a conduta e a confiança. No fim vê o desfecho real e a área de desacelerações dos 30 minutos anteriores a cada paragem, comparada com os 552 partos da base.</li>
         <li><b>Treino adaptativo e níveis:</b> cada resposta fica guardada neste browser. O sorteio mostra mais vezes os padrões em que falha e espaça os que já domina. Os quatro níveis usam as últimas 60 respostas (classificação, cada campo, traçados patológicos e calibração da confiança) e são critérios desta plataforma, não uma certificação.</li>
+        <li><b>Casos a partir de registos reais:</b> 20 casos (7 básicos, 7 intermédios, 6 avançados) foram desenhados a partir de padrões encontrados nos 552 registos: sono fetal, desacelerações variáveis grandes com pH normal, efeito do sulfato de magnésio, febre, taquissistolia espontânea, linha de base que sobe lentamente, mecónio espesso, bradicardia final, expulsivo longo. Cada caso foi testado em simulação repetida: os casos normais terminam bem sem intervir, e os de hipoxia agravam sem atuação e melhoram com a atuação certa. O pH real do registo de origem serve de referência, não de alvo exato.</li>
         <li><b>Turno no bloco de partos:</b> três casos da Sala de partos correm ao mesmo tempo, sem pausa nas mensagens. Há interrupções (tratar ou delegar), revisões com olhos frescos, uma passagem de turno em formato SBAR e chamadas estruturadas ao sénior. O relatório junta a qualidade dos cuidados em cada sala com indicadores de fatores humanos: tempo até ver os alertas e minutos de traçado patológico numa sala que não era vigiada há mais de 15 min.</li>
         <li><b>Apoio computorizado (traçados reais):</b> estima o risco de acidemia a partir da área de desacelerações dos últimos 30 min, com as taxas observadas nos 552 partos (AUC 0,64), e mostra a linha de base, as desacelerações, a variabilidade de curto prazo e o sinal em falta. Por omissão aparece em metade dos casos, ao acaso, para cada pessoa comparar o seu desempenho com e sem apoio.</li>
         <li><b>Verdade clínica:</b> a classificação «correta» é calculada a partir do que foi gerado (desacelerações registadas, contrações, durações), aplicando as regras de cada diretriz tal como estão escritas.</li>
@@ -442,6 +444,7 @@
 <script src="js/config.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/cases.js"></script>
+<script src="js/cases2.js"></script>
 <script src="js/sim.js"></script>
 <script src="js/demo.js"></script>
 <script src="js/drill.js"></script>
