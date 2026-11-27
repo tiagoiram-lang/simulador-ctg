@@ -7,7 +7,7 @@ const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const NOSC=12,OSC_LO=0.8,OSC_HI=20,OSC_BETA=0.3,VSCALE=.25; // calibração CTU-UHB
 const DEF = {baseline:140,varAmp:12,accelPerHour:6,accelAmp:20,cycling:false,cInt:200,cDur:70,cAmp:50,tone:12,toneRamp:30,
   decelType:'none',decelProb:0,decelDepth:30,varInDecel:1,sinus:0,sinusCpm:4,maternal:false,showMhr:false,mhrBase:88,mhrPush:false,
-  ramp:20,varRamp:8,pushing:false,loss:0,mhrCapture:false};
+  ramp:20,varRamp:8,pushing:false,loss:0,mhrCapture:false,dbl:false,dblLim:82,ect:0,scalp:false};
 
 class Engine{
   constructor(params,seed=7){
@@ -101,6 +101,11 @@ class Engine{
     let push=0;if(p.mhrPush)for(const c of this.cs){const x=(t-c.s)/c.d;if(x>0&&x<1)push=Math.max(push,26*Math.sin(Math.PI*x)**1.2)}
     const m=p.mhrBase+mvv*2.2+push+this.jit*.6;
     let rec=p.maternal?m:f;
+    /* artefacto de duplicação: com ultrassons, uma bradicardia abaixo de ~80 bpm pode ser contada a dobrar */
+    if(p.dbl&&!p.maternal){if(this.dblOn?f>p.dblLim+10:f<p.dblLim-2)this.dblOn=!this.dblOn;if(this.dblOn)rec=2*f+this.jit*2}else this.dblOn=false;
+    /* extrassístoles: no ECG do escalpe aparecem como picos isolados para cima e para baixo; nos ultrassons quase não se veem */
+    if(p.ect>0){if(!this.ectT&&r()<p.ect*DT/60){this.ectT=2;this.ectA=32+r()*22}
+      if(this.ectT){const s=this.ectT===2?1:-.85;rec+=s*this.ectA*(p.scalp?1:.15);this.ectT--}}
     if(p.loss>0||this.gap>0){
       if(this.gap>0){this.gap-=DT;rec=p.mhrCapture?m:NaN}
       else if(r()<p.loss*DT/60){const u=r();this.gap=u<.72?1+r()*3.5:u<.96?5+r()*25:30+r()*120}
@@ -158,6 +163,7 @@ function drawCTG(cv,eng,o){
   if(o.bands)for(const bd of o.bands){if(bd.e<t0||bd.s>tEnd)continue;c.fillStyle=bd.col;c.fillRect(X(bd.s),y0,X(bd.e)-X(bd.s),fh)}
   if(o.trueF) path(eng.TF,'rgba(46,139,87,.75)',1.1,[2,3]);
   if(o.mhr||eng.p.showMhr) path(eng.M,'rgba(194,59,50,.85)',1.3,[4,3]);
+  if(eng.F2){path(eng.F2,'#0A7F8F',compact?1:1.25);if(!compact){c.font='600 11px "Geist",sans-serif';c.textBaseline='alphabetic';c.textAlign='left';c.fillStyle='#16213A';c.fillText('— Gémeo A',L+70,y0+14);c.fillStyle='#0A7F8F';c.fillText('— Gémeo B',L+148,y0+14)}}
   path(eng.F,'#16213A',compact?1.1:1.35);
   path(eng.T,'#16213A',compact?1:1.2,null,true);
   if(o.marks){

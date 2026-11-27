@@ -49,7 +49,7 @@ function tuRender(){
   $('tsSpeed').onclick=e=>{const b=e.target.closest('button');if(!b)return;TU.speed=+b.dataset.s;document.querySelectorAll('#tsSpeed button').forEach(x=>x.classList.toggle('on',x===b))};
   $('tsPlay').onclick=()=>{TU.run=!TU.run;if(!TU.run)TU.pauses++;$('tsPlay').textContent=TU.run?'Pausar':'Retomar'};
   $('tsQuit').onclick=e=>{const b=e.target;if(!b.dataset.c){b.dataset.c=1;b.textContent='Confirmar: terminar';return}tuEnd('Turno terminado pelo utilizador.')};
-  $('tfActs').innerHTML=ACTS.map(([g,list])=>`<div class="agrp"><h4>${g}</h4><div class="abtns">${list.map(([id,l])=>`<button data-a="${id}" class="${['ces1','ces2','inst'].includes(id)?'dec':''}">${l}</button>`).join('')}</div></div>`).join('');
+  $('tfActs').innerHTML=ACTS.map(([g,list])=>`<div class="agrp"><h4>${g}</h4><div class="abtns">${list.filter(([id])=>id!=='sonda2'||TU.rooms[TU.focus].cs.twin).map(([id,l])=>`<button data-a="${id}" class="${['ces1','ces2','inst'].includes(id)?'dec':''}">${l}</button>`).join('')}</div></div>`).join('');
   $('tfActs').onclick=e=>{const b=e.target.closest('button');if(!b||b.disabled||TU.busy)return;tuAct(b.dataset.a)};
 }
 function tuFocus(i){

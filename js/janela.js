@@ -9,6 +9,14 @@ function idealStep(s,P){
   if(s.decision||s.ended)return;
   const tr=s.truth();if(!tr)return;
   const p10=e.contr10(),bad=tr.figo==='P'||tr.figo==='S';
+  /* sinais que não são do feto certo */
+  if(s.flags.coinc)act('sonda2');
+  if(e.p.dbl&&e.TF[e.TF.length-1]<e.p.dblLim+5)act('eletrodo');
+  /* pré-eclâmpsia grave e eclâmpsia: primeiro a mãe */
+  if(s.cs.preecl&&!st.mg)act('mgso4');
+  if(A&&A.cause==='eclampsia'&&!A.resolved){act('ajuda');act('lat_e');act('mgso4');act('o2');return}
+  /* gémeo B */
+  if(s.e2){const tB=s.twinBAt(e.t);if(tB==='P'){if(st.oxy>0)act('oxy_stop');if(!['lat_e','lat_d'].includes(st.posicao))act('lat_e');P.bStart??=s.tmin();if(s.tmin()-P.bStart>=15){deliver(false);return}}else P.bStart=null}
   /* origem do sinal */
   if((e.p.mhrCapture||e.p.maternal)&&(st.pushing||tr.figo==='X'))act('oximetro');
   if(tr.figo==='X'){act('eletrodo');return}
@@ -44,7 +52,7 @@ function cfRun(sim,cut){
     if(s.ended)break;s.step();
   }
   if(!s.ended)s.finish('fim');
-  const o=s.outcome;return{cut,pH:o.born?o.pHa:Math.round(s.st.pH*100)/100,born:o.born,tm:o.tm,label:o.label,log:P.log};
+  const o=s.outcome;return{cut,pHB:o.b2?o.b2.pHa:null,pH:o.born?o.pHa:Math.round(s.st.pH*100)/100,born:o.born,tm:o.tm,label:o.label,log:P.log};
 }
 
 /* pontos de corte: do início até à decisão do formando (ou ao fim), em passos regulares */

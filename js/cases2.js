@@ -167,7 +167,7 @@ CASES.push(
   fet:{base:135,var:12,accel:4,pH0:7.31,reserve:.82,cord:.12,head:.3,sens:1.2,spont:2.4,rate:1.6,pushMins:30,autoPush:10},
   protocolOxy:true,
   ev:[
-    {at:8,fn:s=>{s.e.p.varAmp=6.5;s.e.p.accelPerHour=1.2;s.msg('Enf.ª Rosa','Iniciei sulfato de magnésio: bólus de 4 g e perfusão a 1 g/h, conforme prescrição.')}},
+    {at:8,fn:s=>{s.st.varMul=.55;s.st.accMul=.25;s.st.mg=true;s.msg('Enf.ª Rosa','Iniciei sulfato de magnésio: bólus de 4 g e perfusão a 1 g/h, conforme prescrição.')}},
     {at:45,call:'Enf.ª Rosa: «Desde o magnésio, a variabilidade baixou e deixou de haver acelerações. É hipoxia?»'},
   ],
   eco:'Feto cefálico, FCF 135 bpm, Doppler da artéria umbilical normal.',

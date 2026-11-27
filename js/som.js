@@ -70,6 +70,9 @@ function sndAlarmsFor(e,act={}){
     const bradi=act.bradi?med(w30)<110:full(w180,180)&&ok(w180).length>w180.length*.5&&frac(w180,v=>v<100)>=.9;
     if(bradi)out.push({id:'bradi',prio:'alta',lab:'FCF < 100 bpm há mais de 3 min'});
     else if(act.baixa?med(w20)<115:full(w60,60)&&ok(w60).length>w60.length*.6&&frac(w60,v=>v<110)>=.9)out.push({id:'baixa',prio:'media',lab:'FCF < 110 bpm há mais de 1 min'});
+    if(e.F2&&F.length===e.F2.length){const a=F.slice(-120),b=e.F2.slice(-120);let n=0,c=0;for(let i=0;i<a.length;i++)if(a[i]===a[i]&&b[i]===b[i]){n++;if(Math.abs(a[i]-b[i])<4)c++}
+      if(act.coinc?(n>20&&c/n>.6):(n>=90&&c/n>=.85))out.push({id:'coinc',prio:'media',lab:'Coincidência dos canais FCF A e B: o mesmo feto?'});
+      const b60=e.F2.slice(-120).filter(v=>v===v);if(act.bbaixa?med(e.F2.slice(-40))<115:(b60.length>80&&b60.filter(v=>v<110).length/b60.length>=.9))out.push({id:'bbaixa',prio:'media',lab:'Gémeo B: FCF < 110 bpm há mais de 1 min'})}
     const w120=win(120);
     if(act.alta?med(w60)>155:full(w120,120)&&ok(w120).length>w120.length*.6&&frac(w120,v=>v>160)>=.9)out.push({id:'alta',prio:'media',lab:'FCF > 160 bpm há mais de 2 min'});
   }

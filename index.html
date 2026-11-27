@@ -358,7 +358,7 @@
       <h2>Sobre esta plataforma</h2>
       <p>Plataforma de treino e autoavaliação em vigilância fetal intraparto, para estudo individual, ensino em grupo e avaliação de competências. Junta a classificação por padrões (FIGO 2015, ACOG 2025, NICE NG229), a interpretação fisiológica do CTG e traçados reais com desfecho neonatal conhecido.</p>
       <p><b>Estado da revisão clínica:</b> por validar. Os casos, os critérios de avaliação e os parâmetros do modelo devem ser revistos por profissionais de obstetrícia antes de qualquer uso formal de avaliação.</p>
-      <p class="small">Versão 10 · novembro de 2026. As doentes da Sala de partos e os traçados do Treino rápido são fictícios; 20 dos 31 casos seguem o padrão e o contexto clínico de um registo real da base CTU-UHB, indicado no relatório final. O separador «Traçados reais» usa registos reais anonimizados da base pública CTU-UHB (Brno, 2010–2012), com o respetivo desfecho neonatal.</p>
+      <p class="small">Versão 11 · novembro de 2026. As doentes da Sala de partos e os traçados do Treino rápido são fictícios; 20 dos 38 casos seguem o padrão e o contexto clínico de um registo real da base CTU-UHB, indicado no relatório final. O separador «Traçados reais» usa registos reais anonimizados da base pública CTU-UHB (Brno, 2010–2012), com o respetivo desfecho neonatal.</p>
     </div>
     <div class="card notes">
       <h3>Como funciona o simulador</h3>
@@ -368,6 +368,8 @@
         <li><b>Desfecho:</b> pH da artéria umbilical, défice de bases, lactato e Apgar são derivados do pH final por relações aproximadas.</li>
         <li><b>Caso em tempo real (traçados reais):</b> o registo avança e para aos 20 minutos e depois de 15 em 15; em cada paragem regista a classificação, a conduta e a confiança. No fim vê o desfecho real e a área de desacelerações dos 30 minutos anteriores a cada paragem, comparada com os 552 partos da base.</li>
         <li><b>Treino adaptativo e níveis:</b> cada resposta fica guardada neste browser. O sorteio mostra mais vezes os padrões em que falha e espaça os que já domina. Os quatro níveis usam as últimas 60 respostas (classificação, cada campo, traçados patológicos e calibração da confiança) e são critérios desta plataforma, não uma certificação.</li>
+        <li><b>Gémeos, artefactos e arritmias:</b> gravidez gemelar com dois canais de FCF e o risco de os dois transdutores registarem o mesmo feto (com alarme de coincidência); duplicação da FCF pelos ultrassons numa bradicardia; extrassístoles fetais, que aparecem como picos com o elétrodo de escalpe.</li>
+        <li><b>Fármacos e emergências maternas:</b> petidina e sulfato de magnésio como ações, efeito dos corticoides no traçado, rotura de vasa prévia e convulsão eclâmptica. Os efeitos dos fármacos na variabilidade e nas acelerações duram o tempo que devem e entram na interpretação correta do traçado.</li>
         <li><b>Janela de oportunidade:</b> no fim de cada caso da Sala de partos, o simulador repete o caso com a mesma evolução, reproduz as ações do formando até um certo minuto e, daí em diante, aplica uma atuação ideal automática (corrigir causas reversíveis, decúbito lateral, regra 3-6-9-12-15, decisão de parto se o traçado patológico não reverte em 15 min, parto imediato nos acidentes agudos). O gráfico mostra o pH provável ao nascer consoante a hora a que a atuação certa começa, até quando a janela esteve aberta e quanto custou cada 10 min de atraso. A atuação ideal serve para comparar momentos; não é a única conduta correta.</li>
         <li><b>Classificação dos erros:</b> as revisões, os critérios clínicos e as respostas do Treino rápido são agrupados em erros de leitura (linha de base, variabilidade, acelerações, desacelerações, contrações), de interpretação (subestimar ou sobrestimar a gravidade, fisiologia da hipoxia) e de decisão (escalada tardia, causas reversíveis, intervenção desnecessária, origem do sinal, febre, vigilância). Em Resultados aparece o perfil acumulado com sugestões de casos; o formador vê os erros mais frequentes da turma e de cada formando.</li>
         <li><b>Som do monitor:</b> na Sala de partos, no Turno e na Demonstração ouve-se o batimento fetal como num Doppler, à frequência que o monitor está a registar. Desaparece quando o sinal se perde. Há alarmes com padrões de prioridade inspirados na norma IEC 60601-1-8: FCF abaixo de 110 bpm durante 1 min, abaixo de 100 bpm durante 3 min, acima de 160 bpm durante 2 min e perda de sinal. Há ainda o telefone quando a equipa pede revisão, um aviso nas mensagens e o bip da bomba de ocitocina. Os alarmes podem ser silenciados e ficam registados no relatório final. O seletor de som tem três posições: sem som, só alarmes e chamadas, ou som completo.</li>
@@ -455,6 +457,7 @@
 <script src="js/engine.js"></script>
 <script src="js/cases.js"></script>
 <script src="js/cases2.js"></script>
+<script src="js/cases3.js"></script>
 <script src="js/sim.js"></script>
 <script src="js/demo.js"></script>
 <script src="js/drill.js"></script>

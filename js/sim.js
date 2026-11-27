@@ -1,6 +1,6 @@
 /* Simulação de um trabalho de parto: fisiologia fetal simplificada, eventos, ações e verdade clínica */
 const POS_LAB={semi:'Semi-sentada',dorsal:'Decúbito dorsal',lat_e:'Decúbito lateral esquerdo',lat_d:'Decúbito lateral direito',vertical:'Sentada / vertical',genu:'Genupeitoral'};
-const ACCIDENTS=['prolapso','rotura','descolamento'];
+const ACCIDENTS=['prolapso','rotura','descolamento','vasa'];
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)]};
 
@@ -12,10 +12,12 @@ class LabourSim{
     this.cs=cs;this.mode=opts.mode||'formacao';const f=cs.fet,s0=cs.start;
     this.st={dil:s0.dil,station:s0.station,pos:s0.pos,membr:s0.membr,liquido:s0.liquido,analgesia:s0.analgesia,oxy:s0.oxy,posicao:'semi',
       pushing:false,fullAt:s0.dil>=10?0:null,pushAcc:0,pushStart:null,tas:cs.mat.tas,tad:cs.mat.tad,fcm:cs.mat.fc,temp:cs.mat.temp,spo2:cs.mat.spo2,
-      pH:f.pH0,opioidUntil:-1e9,tocoUntil:-1e9,terbUntil:-1e9,paraUntil:-1e9,abx:false,oxi:false,scalp:false,hypo:false,oxyStopAt:null,fluids:0,vitals:null};
+      pH:f.pH0,varMul:1,accMul:1,mg:false,seizure:false,opioidUntil:-1e9,tocoUntil:-1e9,terbUntil:-1e9,paraUntil:-1e9,abx:false,oxi:false,scalp:false,hypo:false,oxyStopAt:null,fluids:0,vitals:null};
     this.e=new Engine({baseline:f.base,varAmp:f.var,accelPerHour:f.accel,cycling:!f.chronic&&!f.sinus,cInt:f.spont>0?600/f.spont:0,cDur:75,cAmp:40,tone:10,
       mhrBase:cs.mat.fc,ramp:2,varRamp:2,toneRamp:20,sinus:f.sinus||0,sinusCpm:4},this.seed);
-    this.e.decelHook=c=>this.decel(c);
+    this.e.decelHook=c=>{if(this.e2)this.e2.mkDecel(c);return this.decel(c)};
+    if(cs.twin){const w=cs.twin;this.e2=new Engine({baseline:w.base,varAmp:w.var,accelPerHour:w.accel,cycling:true,cInt:0,tone:10,ramp:2,varRamp:2},this.seed+101);
+      this.e2.decelHook=c=>this.decelB(c);this.st.pH2=w.pH0;this.e.F2=[]}
     this.flags={};this.feed=[];this.acts=[];this.reviews=[];this.hist=[];this.acute=null;this.acuteHist=[];this.decision=null;this.ended=false;this.outcome=null;
     this.per10=f.spont;this.terminal=false;this.lastUpd=-1e9;this.lastSnap=-1e9;this.evi=0;this.lastProto=0;this.lastVit=0;this.nPush=0;
     this.onMsg=null;this.onEnd=null;
@@ -25,12 +27,15 @@ class LabourSim{
   }
   tmin(t){return ((t??this.e.t)-this.t0)/60}
   clock(t){const [h,m]=this.cs.start.clock.split(':').map(Number);let x=Math.round(h*60+m+this.tmin(t));x=((x%1440)+1440)%1440;return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}
-  reserve(){const f=this.cs.fet,st=this.st,A=this.acute;let r=f.reserve;if(st.temp>=38)r*=.85;if(st.hypo)r*=.9;if(A&&A.cause==='descolamento')r*=.55;return r}
+  reserve(){const f=this.cs.fet,st=this.st,A=this.acute;let r=f.reserve;if(st.temp>=38)r*=.85;if(st.hypo)r*=.9;if(A&&A.cause==='descolamento')r*=.55;if(A&&A.cause==='vasa')r*=.5;if(A&&A.cause==='eclampsia'&&!A.resolved)r*=.85;return r}
   msg(who,text,o={}){const it={tm:this.tmin(),clock:this.clock(),who,text,kind:o.kind||'msg'};this.feed.push(it);if(this.onMsg)this.onMsg(it,o);return it}
 
   step(pre){
     if(this.ended)return;
     this.e.step();this.physio();
+    if(this.e2){const e2=this.e2;e2.step();this.physioB();const fa=this.e.F[this.e.F.length-1];
+      this.e.F2.push(this.flags.coinc?(fa===fa?fa+1.5+e2.jit*1.5:NaN):e2.F[e2.F.length-1])}
+    if(this.cs.fet.dblArt&&this.flags.dblAt==null&&this.e.p.dbl&&this.e.TF[this.e.TF.length-1]<this.e.p.dblLim&&!pre)this.flags.dblAt=this.tmin();
     const tm=this.tmin();
     if(!pre){
       const ev=this.cs.ev||[];
@@ -54,11 +59,39 @@ class LabourSim{
     if(this.terminal)d-=.008;
     st.pH=clamp(st.pH+d*DT/60,6.72,f.pH0);
   }
+  /* gémeo B: pH e desacelerações tardias próprias, com as mesmas contrações */
+  physioB(){
+    const st=this.st,w=this.cs.twin,e2=this.e2,res=w.reserve*(st.hypo?.9:1),drop=e2.curDrop;let d=0;
+    if(drop>10)d-=.009*clamp((drop-10)/50,0,1.3)*(1.3-.4*res);
+    if(this.e.inContr>15)d-=.006*(1-res)*(this.e.inContr/50);
+    if(drop<=10&&this.e.inContr<15&&st.pH2<w.pH0)d+=.002*res;
+    st.pH2=clamp(st.pH2+d*DT/60,6.72,w.pH0);
+  }
+  decelB(c){
+    const st=this.st,w=this.cs.twin,r=this.e2.r;
+    const load=(c.a/45)*(c.d/75)*(this.per10>5?1.25:1),res=w.reserve*(st.hypo?.9:1);
+    const u=clamp(load*(1-res)*1.4+(st.pH2<7.2?.3:0)-.18,0,1);
+    if(r()<u*1.4)return{k:'g',s:c.s+c.d*.3+12,d:c.d*1.05,depth:10+30*u+r()*8,type:'tardia'};
+    if(r()<(w.cord||0))return{k:'v',s:c.s+c.d*.2,f:8+r()*6,h:10+r()*20,g:8+r()*6,depth:25+r()*25,type:'variavel'};
+    return null;
+  }
+  twinBAt(T){
+    if(!this.e2)return null;const W0=T-1800,nC=this.e.contrIn(W0,T);
+    const late=this.e2.dlog.filter(d=>d.s>W0&&d.s<=T&&d.type==='tardia').length;
+    return nC>0&&late/nC>.5?'P':late>=2?'S':'N';
+  }
+  eclampsia(){
+    const st=this.st;st.tas=174;st.tad=114;st.spo2=88;st.seizure=true;
+    this.startAcute('eclampsia');
+    this.msg('Enf.ª',`A Sra. ${this.cs.nome.split(' ')[0]} está a convulsionar! Movimentos tónico-clónicos generalizados.`,{pause:true});
+    this.e.at(95,()=>{st.seizure=false;st.spo2=93;this.msg('Enf.ª','A convulsão parou ao fim de cerca de minuto e meio. Está sonolenta, a respirar espontaneamente.')});
+  }
   decel(c){
     const st=this.st,f=this.cs.fet,r=this.e.r,A=this.acute;
     const load=(c.a/45)*(c.d/75)*(this.per10>5?1.25:1);
     const res=this.reserve();
     const long=this.per10>5&&(st.pushing||this.e.p.tone>25);
+    if(A&&A.cause==='vasa'&&!this.e.pro)return null;
     if(A&&A.cause==='descolamento'&&!this.e.pro&&r()<.9)return{k:'g',s:c.s+c.d*.3+12,d:c.d*1.4+20,depth:28+r()*12,type:'tardia'};
     const lateralOK=['lat_e','lat_d','genu','vertical'].includes(st.posicao)&&f.cordPos;
     const pc=f.cord*(st.pushing?1.6:1)*(lateralOK?.35:1);
@@ -95,7 +128,7 @@ class LabourSim{
     // febre
     if(f.fever){const target=tm<st.paraUntil?37.7:37.6+Math.min(1.7,Math.max(0,tm)/60*.75);st.temp+=(target-st.temp)*.03}
     // FC materna
-    let fcm=cs.mat.fc+Math.max(0,st.temp-37.2)*14+(tm<st.terbUntil?26:0)+(st.hypo?22:0)+(A&&A.cause==='rotura'?40:0)+(A&&A.cause==='descolamento'?20:0);
+    let fcm=cs.mat.fc+Math.max(0,st.temp-37.2)*14+(tm<st.terbUntil?26:0)+(st.hypo?22:0)+(A&&A.cause==='rotura'?40:0)+(A&&A.cause==='descolamento'?20:0)+(st.seizure?30:0);
     st.fcm=Math.round(fcm);
     if(A&&A.cause==='rotura'&&!pre){st.tas=Math.max(78,st.tas-.25);st.tad=Math.max(42,st.tad-.15)}
     // hipotensão
@@ -127,10 +160,16 @@ class LabourSim{
     if(st.pH<7.0)this.terminal=true;
     if(this.terminal)base=78;
     e.set({baseline:base,ramp:this.terminal?8:2});
-    let v=f.var;if(tm<st.opioidUntil)v*=.3;if(st.pH<7.12)v*=clamp(.25+(st.pH-7.03)/.09*.75,.25,1);if(this.terminal)v=1.5;
+    let v=f.var*st.varMul;if(tm<st.opioidUntil)v*=.3;if(st.pH<7.12)v*=clamp(.25+(st.pH-7.03)/.09*.75,.25,1);if(this.terminal)v=1.5;
     if(!f.sinus)e.set({varAmp:v,varRamp:2});
     const ok=st.pH>7.25&&tm>=st.opioidUntil&&!f.chronic&&!f.sinus;
-    e.set({accelPerHour:ok?f.accel:0,cycling:st.pH>7.2&&!f.chronic&&!f.sinus});
+    e.set({accelPerHour:ok?f.accel*st.accMul:0,cycling:st.pH>7.2&&!f.chronic&&!f.sinus});
+    e.set({dbl:!!f.dblArt&&!st.scalp,ect:f.ectopic||0,scalp:st.scalp});
+    if(this.e2){const w=cs.twin;let b2=w.base+(st.pH2<7.22?Math.min(32,(7.22-st.pH2)*320):0),v2=w.var*(st.pH2<7.12?clamp(.25+(st.pH2-7.03)/.09*.75,.25,1):1);
+      this.e2.set({baseline:b2,varAmp:v2,accelPerHour:st.pH2>7.25?w.accel:0,cycling:st.pH2>7.2})}
+    if(A&&A.cause==='eclampsia'&&!A.resolved&&!st.seizure){
+      if(st.mg&&['lat_e','lat_d'].includes(st.posicao)&&tm>=A.start+3){A.resolved=tm;e.recover(60);st.tas=Math.min(st.tas,158);st.tad=Math.min(st.tad,102)}
+      else if(tm>=A.start+11){A.resolved=tm;e.recover(120);if(!st.mg&&!this.flags.ecl2){this.flags.ecl2=1;e.at(22*MIN,()=>{if(!st.mg&&!this.ended&&!this.decision)this.eclampsia()})}}}
     const cap=!!f.mhrCapture&&!st.scalp;
     e.set({mhrBase:st.fcm,maternal:cap&&st.pushing,mhrCapture:cap,loss:st.scalp?.1:(f.loss??.8)*(st.pushing?1.6:1),showMhr:st.oxi});
     // decisão de parto
@@ -143,7 +182,7 @@ class LabourSim{
   snap(){
     const e=this.e,st=this.st;
     this.hist.push({t:e.t,tm:this.tmin(),b:e.b,va:e.p.sinus?0:e.va*(e.qNow?.35:1),sinus:!!e.p.sinus,maternal:!!e.p.maternal,per10:e.contrIn(e.t-1800,e.t)/3,pH:st.pH,pro:!!e.pro,
-      temp:st.temp,opioid:this.tmin()<st.opioidUntil+20,quiet:this.e.qNow,oxy:st.oxy,terminal:this.terminal,pushing:st.pushing});
+      temp:st.temp,opioid:this.tmin()<st.opioidUntil+20||st.varMul<.8,quiet:this.e.qNow,oxy:st.oxy,terminal:this.terminal,pushing:st.pushing});
   }
   recordVitals(by){
     const st=this.st;this.lastVit=this.tmin();
@@ -160,13 +199,18 @@ class LabourSim{
     this.acute={cause,start:this.tmin(),resolved:null};this.flags[cause]=1;
     const e=this.e;
     if(cause==='descolamento'){e.at(12*MIN,()=>{if(!this.ended)e.startPro({drop:68,fall:60,vf:.6,vfLate:.2})});return}
-    const drop={hipotensao:62,hipertonia:55,prolapso:72,rotura:76}[cause];
+    if(cause==='vasa'){e.startPro({drop:74,fall:150,vf:.5,vfLate:.15});return}
+    const drop={hipotensao:62,hipertonia:55,prolapso:72,rotura:76,eclampsia:60}[cause];
     const acc=ACCIDENTS.includes(cause);
     e.startPro({drop,fall:cause==='hipotensao'?55:30,vf:acc?.9:1,vfLate:acc?.25:.8});
   }
   hypotension(tas,tad){this.st.hypo=true;this.st.tas=tas;this.st.tad=tad}
   rupture(spont){
-    const st=this.st;st.membr='rotas';st.liquido='claro, abundante';
+    const st=this.st;st.membr='rotas';
+    if(this.cs.vasaRisk&&!this.flags.vasa){this.flags.vasa=1;st.liquido='hemático';
+      this.msg('Enf.ª',(spont?'Rotura espontânea de membranas':'Amniotomia realizada')+': saída de líquido com sangue vivo. A parturiente não tem dor e o útero está mole entre as contrações.');
+      this.e.at(40,()=>this.startAcute('vasa'));return}
+    st.liquido='claro, abundante';
     this.msg('Enf.ª',spont?'Rotura espontânea de membranas: saída abundante de líquido claro.':'Amniotomia realizada: saída abundante de líquido claro.');
     if((this.cs.id==='ines'||this.cs.prolapseRisk)&&!this.flags.prolapso){this.flags.prolapso=1;this.e.at(40,()=>this.startAcute('prolapso'))}
   }
@@ -191,9 +235,13 @@ class LabourSim{
     if(f.fever&&!st.abx)notes.push('Mãe febril sem antibioterapia intraparto: risco de sépsis neonatal precoce, rastreio e antibiótico no recém-nascido.');
     else if(f.fever)notes.push('Corioamnionite tratada: rastreio séptico neonatal conforme o protocolo.');
     if(f.sinus)notes.push('Anemia neonatal grave (Hb 7,2 g/dL): transfusão na UCIN.');
+    if(this.flags.vasa)notes.push('Hemorragia fetal por rotura de vasa prévia: anemia neonatal aguda (Hb 8,6 g/dL), transfusão na UCIN.');
+    if(f.ectopic)notes.push('ECG neonatal: extrassístoles auriculares isoladas, benignas. Sem tratamento.');
     if(!notes.length)notes.push('Recém-nascido vigoroso, contacto pele a pele.');
+    let b2=null;if(this.e2){const pb=Math.round((st.pH2-.02)*100)/100;let x1=9,x5=10;if(pb<7.2){x1=8;x5=9}if(pb<7.1){x1=6;x5=8}if(pb<7.0){x1=4;x5=7}if(pb<6.9){x1=2;x5=5}
+      b2={pHa:pb,pHv:Math.round((pb+.07)*100)/100,a1:x1,a5:x5};notes.push(`Gémeo B: pH da artéria ${pb.toFixed(2).replace('.',',')}, Apgar ${x1}/${x5}.`+(pb<7.1?' Acidemia: vigilância neonatal.':''))}
     const LAB={eutocico:'Parto eutócico',inst:'Parto vaginal instrumentado (ventosa)',ces1:'Cesariana emergente (categoria 1)',ces2:'Cesariana urgente (categoria 2)'};
-    this.outcome={kind,label:LAB[kind],clock:this.clock(),tm:this.tmin(),pHa,pHv,be,lact,a1,a5,notes,born:true};
+    this.outcome={kind,label:LAB[kind],clock:this.clock(),tm:this.tmin(),pHa,pHv,be,lact,a1,a5,notes,born:true,b2};
     this.msg('Nascimento',`${LAB[kind]} às ${this.clock()}. Índice de Apgar ${a1}/${a5}.`,{kind:'sys'});
     this.ended=true;if(this.onEnd)this.onEnd();
   }
@@ -276,6 +324,9 @@ class LabourSim{
       case 'paracet':return this.tmin()<st.paraUntil?no('Administrado há menos de 6 h'):{ok:true};
       case 'abx':return st.abx?no('Já iniciada'):{ok:true};
       case 'oximetro':return st.oxi?no('Já em curso'):{ok:true};
+      case 'petid':return this.tmin()<st.opioidUntil+150?no('Administrada há menos de 4 h'):{ok:true};
+      case 'mgso4':return st.mg?no('Já em curso'):{ok:true};
+      case 'sonda2':return !this.e2?no('Só em gravidez gemelar'):{ok:true};
       case 'amnio':return st.membr==='íntegras'&&st.dil>=2?{ok:true}:no(st.membr!=='íntegras'?'Membranas já rotas':'Dilatação insuficiente');
       case 'eletrodo':return st.scalp?no('Já aplicado'):(st.membr!=='íntegras'&&st.dil>=2?{ok:true}:no('Requer membranas rotas e dilatação ≥2 cm'));
       case 'estim':return st.dil>=2?{ok:true}:no('Requer dilatação ≥2 cm');
@@ -294,7 +345,7 @@ class LabourSim{
     const hyp=st.hypo,P=tr.figo==='P',S=tr.figo==='S',acute=A&&!A.resolved;
     const G=(r)=>({q:'good',r}),N=(r)=>({q:'neutral',r}),B=(r)=>({q:'bad',r});
     switch(id){
-      case 'o2':return B('Uma meta-análise de 16 ensaios aleatorizados (Raghuraman et al., 2021) não mostrou melhoria do pH da artéria umbilical; a ACOG desaconselha oxigénio por rotina numa mãe bem oxigenada.');
+      case 'o2':if(A&&A.cause==='eclampsia')return G('Oxigénio para a mãe depois da convulsão (via aérea e oxigenação maternas), não como tratamento fetal.');return B('Uma meta-análise de 16 ensaios aleatorizados (Raghuraman et al., 2021) não mostrou melhoria do pH da artéria umbilical; a ACOG desaconselha oxigénio por rotina numa mãe bem oxigenada.');
       case 'oxy_up':return(tr.figo!=='N'||p10>=5||f.chronic)?B('Aumentar a ocitocina com traçado alterado, taquissistolia ou feto com pouca reserva agrava a hipoxia.'):N('Aceitável com traçado normal e menos de 5 contrações em 10 min.');
       case 'oxy_start':return(tr.figo!=='N'||f.chronic)?B('Iniciar ocitocina com traçado alterado ou feto comprometido não está indicado.'):N('Decisão obstétrica; vigiar a frequência das contrações.');
       case 'oxy_down':case 'oxy_stop':return(p10>5||P||S||(acute&&A.cause!=='hipotensao'))?G('Reduz a frequência das contrações e o stress hipóxico.'):N('Sem indicação fetal neste momento.');
@@ -308,18 +359,23 @@ class LabourSim{
       case 'toque':return(acute||P)?G('Exclui prolapso e avalia condições para parto.'):N('Avaliação da progressão.');
       case 'vitais':return(acute||f.fever||P)?G('Procura de causas maternas.'):N('Registo de rotina.');
       case 'oximetro':return(this.e.p.mhrCapture||this.e.p.maternal)?G('Permite distinguir a FC materna da fetal.'):N('Boa prática: monitorizar sempre a FC materna.');
-      case 'eletrodo':return(this.e.p.mhrCapture||this.e.p.loss>0)?G('Sinal fetal fiável.'):N('Sinal externo já adequado.');
-      case 'eco':return(this.e.p.mhrCapture||f.sinus||acute)?G('Confirma a FCF e procura a causa.'):N('Sem alteração do plano.');
+      case 'eletrodo':return(this.e.p.mhrCapture||this.e.p.loss>0||this.e.p.dbl||f.ectopic)?G('Sinal fetal fiável.'):N('Sinal externo já adequado.');
+      case 'eco':return(this.e.p.mhrCapture||f.sinus||acute||this.flags.coinc||this.e.p.dbl||f.ectopic)?G('Confirma a FCF e procura a causa.'):N('Sem alteração do plano.');
       case 'estim':return(acute&&this.e.pro)?B('Não está indicada durante uma desaceleração prolongada.'):(S||tr.cat==='reduzida'?G('Método adicional: uma aceleração torna a acidose improvável.'):N('Traçado já tranquilizador.'));
       case 'lactato':return(acute&&this.e.pro)?B('Atrasa a decisão numa desaceleração prolongada.'):(S||P?G('Método adicional de avaliação da oxigenação fetal.'):N('Sem indicação com traçado normal.'));
+      case 'petid':return(P||S||st.dil>=8)?B(st.dil>=8?'Perto do parto: risco de depressão respiratória do recém-nascido se nascer 1 a 4 h depois.':'Com traçado alterado, o opioide reduz a variabilidade e dificulta a interpretação.'):N('Analgesia possível; reduz a variabilidade e as acelerações durante 1 a 2 h. Registe a hora.');
+      case 'mgso4':return((A&&A.cause==='eclampsia')||this.cs.preecl||st.tas>=160)?G('Trata e previne as convulsões eclâmpticas. Reduz modestamente a variabilidade fetal.'):B('Sem pré-eclâmpsia grave nem eclâmpsia: sem indicação.');
+      case 'sonda2':return this.flags.coinc?G('Os dois canais registavam o mesmo feto: confirmar dois corações diferentes é obrigatório nos gémeos.'):N('Sinal do gémeo B já distinto do gémeo A.');
       case 'paracet':return st.temp>=37.8?G('Trata a febre materna; reduz a taquicardia fetal.'):N('Sem febre.');
       case 'abx':return(f.fever||st.temp>=37.8)?G('Suspeita de infeção intra-amniótica: antibioterapia.'):N('Sem indicação infecciosa.');
-      case 'kb':return(f.sinus||(A&&A.cause==='descolamento'))?G('Ajuda a documentar a causa.'):N('Sem indicação específica.');
+      case 'kb':return(f.sinus||(A&&['descolamento','vasa'].includes(A.cause)))?G('Ajuda a documentar a causa.'):N('Sem indicação específica.');
       case 'ajuda':case 'bloco':return(P||acute||f.sinus)?G('Prepara uma eventual decisão de parto.'):N('Sem urgência neste momento.');
       case 'puxos_stop':return(tr.mech.includes('subaguda')||P||tr.cnt.variavel>=2)?G('Interromper os puxos reduz o stress hipóxico.'):N('Sem indicação fetal.');
       case 'puxos_ini':return P?B('Com traçado patológico, os puxos agravam a hipoxia.'):N('Período expulsivo ativo.');
       case 'ces1':case 'ces2':case 'inst':{
         const accident=A&&ACCIDENTS.includes(A.cause);
+        if(A&&A.cause==='eclampsia'&&!A.resolved&&!st.mg)return B('Primeiro estabilizar a mãe: via aérea, decúbito lateral, sulfato de magnésio e controlo da TA. A bradicardia costuma recuperar em 5 a 10 min.');
+        if(this.e2&&this.twinBAt(this.e.t)==='P')return G('Indicação fetal (gémeo B) para acelerar o parto.');
         if(P||accident||f.sinus||f.chronic||(acute&&this.e.pro))return G('Indicação fetal para acelerar o parto.');
         if(tr.figo==='X')return B('Decisão sem confirmar a origem do sinal.');
         if(tr.figo==='N'&&st.pH>=7.2)return B('Sem indicação fetal: traçado normal.');
@@ -348,17 +404,25 @@ class LabourSim{
       case 'terb':st.tocoUntil=tm+25;st.terbUntil=tm+30;if(cs.on&&cs.on.terb)cs.on.terb(this);txt='Terbutalina 0,25 mg SC. Efeito esperado em 2–5 min; a FC materna vai subir.';
         if(A&&A.cause==='hipertonia'&&!A.resolved)e.at(150,()=>{if(this.acute===A&&!A.resolved){A.resolved=this.tmin();e.recover(30)}});break;
       case 'paracet':st.paraUntil=tm+360;txt='Paracetamol 1 g IV.';break;
+      case 'petid':st.opioidUntil=tm+95;txt='Petidina 50 mg IM com antiemético. Efeito máximo em cerca de 40 min.';break;
+      case 'mgso4':st.mg=true;st.varMul=Math.min(st.varMul,.6);st.accMul=Math.min(st.accMul,.35);txt='Sulfato de magnésio: 4 g IV em 15 min e perfusão a 1 g/h.';break;
+      case 'sonda2':{const was=this.flags.coinc;this.flags.coinc=false;txt='Sonda do gémeo B reposicionada com ajuda da ecografia.';
+        const fb=this.e2.F[this.e2.F.length-1];res=was?`Os dois canais estavam a registar o gémeo A. Gémeo B localizado: FCF ${Math.round(fb)} bpm.`:'Os dois canais já registavam fetos diferentes.';break;}
       case 'abx':st.abx=true;txt='Antibioterapia IV iniciada conforme o protocolo de infeção intra-amniótica.';break;
       case 'o2':txt='Oxigénio por máscara facial a 10 L/min.';break;
       case 'vitais':this.recordVitals('pedido');txt='Sinais vitais avaliados.';break;
       case 'toque':{
         let t=`Dilatação ${Math.floor(st.dil)} cm, apresentação ${st.station>0?'+':''}${Math.round(st.station)}${st.pos&&st.pos!=='—'?', '+st.pos:''}, membranas ${st.membr}${st.membr!=='íntegras'?' (líquido '+st.liquido+')':''}.`;
         if(A&&A.cause==='prolapso'){t='Ansa de cordão palpável na vagina, pulsátil, à frente da apresentação. '+t;this.flags.dxProlapso=1}
+        if(this.flags.vasa)t+=' Líquido hemático, sem coágulos; útero mole.';
         const extra=cs.on&&cs.on.toque&&cs.on.toque(this);if(extra)t=extra+' '+t;
         txt='Exame vaginal realizado.';res=t;break;}
       case 'oximetro':st.oxi=true;txt='Oxímetro aplicado: FC materna registada no papel (linha vermelha).';break;
       case 'eco':txt='Ecografia realizada.';res=(this.e.p.mhrCapture&&st.pushing)?cs.eco:(cs.eco||'Sem alterações.');
-        if(A&&A.cause==='prolapso')res='FCF lenta (~70 bpm). Ansa de cordão à frente da apresentação.';break;
+        if(A&&A.cause==='prolapso')res='FCF lenta (~70 bpm). Ansa de cordão à frente da apresentação.';
+        if(this.e.p.dbl&&this.e.TF[this.e.TF.length-1]<this.e.p.dblLim)res=`FCF real ${Math.round(this.e.TF[this.e.TF.length-1])} bpm: o monitor está a contar a dobrar.`;
+        if(this.e2){const fa=this.e.TF[this.e.TF.length-1],fb=this.e2.F[this.e2.F.length-1];res=`Dois corações: gémeo A ${Math.round(fa)} bpm, gémeo B ${Math.round(fb)} bpm.`+(this.flags.coinc?' A sonda B estava sobre o gémeo A; foi reposicionada.':'');this.flags.coinc=false}
+        if(f.ectopic)res=(res&&res!==cs.eco?res+' ':'')+'Batimentos prematuros isolados, com ritmo de base regular e sem derrame. Aspeto de extrassístoles benignas.';break;
       case 'amnio':{const h=cs.on&&cs.on.amnio;if(h)h(this);else{st.membr='rotas';st.liquido='claro';this.msg('Enf.ª','Amniotomia realizada: líquido claro.')}txt='Amniotomia.';break;}
       case 'eletrodo':st.scalp=true;txt='Elétrodo de escalpe aplicado: sinal fetal (ECG) de boa qualidade.';break;
       case 'estim':{txt='Estimulação digital do escalpe fetal.';
@@ -384,8 +448,8 @@ class LabourSim{
 const ACTS=[
   ['Posição',[['lat_e','Decúbito lateral esquerdo'],['lat_d','Decúbito lateral direito'],['vertical','Sentada / vertical'],['genu','Genupeitoral'],['dorsal','Decúbito dorsal']]],
   ['Ocitocina',[['oxy_up','Aumentar 2 mU/min'],['oxy_down','Reduzir para metade'],['oxy_stop','Suspender'],['oxy_start','Iniciar a 2 mU/min']]],
-  ['Terapêutica',[['fluidos','Bólus de cristaloides 500 mL'],['vaso','Vasopressor (anestesiologia)'],['terb','Tocólise: terbutalina SC'],['paracet','Paracetamol 1 g IV'],['abx','Antibioterapia IV'],['o2','Oxigénio por máscara']]],
-  ['Avaliação',[['vitais','Sinais vitais maternos'],['toque','Exame vaginal'],['oximetro','Oxímetro (FC materna)'],['eco','Ecografia'],['amnio','Amniotomia'],['eletrodo','Elétrodo de escalpe'],['estim','Estimulação do escalpe'],['lactato','Lactato do escalpe'],['kb','Análises (hemograma, Kleihauer, coagulação)']]],
+  ['Terapêutica',[['fluidos','Bólus de cristaloides 500 mL'],['vaso','Vasopressor (anestesiologia)'],['terb','Tocólise: terbutalina SC'],['paracet','Paracetamol 1 g IV'],['petid','Petidina 50 mg IM'],['mgso4','Sulfato de magnésio IV'],['abx','Antibioterapia IV'],['o2','Oxigénio por máscara']]],
+  ['Avaliação',[['vitais','Sinais vitais maternos'],['toque','Exame vaginal'],['oximetro','Oxímetro (FC materna)'],['eco','Ecografia'],['sonda2','Reposicionar sonda do gémeo B'],['amnio','Amniotomia'],['eletrodo','Elétrodo de escalpe'],['estim','Estimulação do escalpe'],['lactato','Lactato do escalpe'],['kb','Análises (hemograma, Kleihauer, coagulação)']]],
   ['Equipa e parto',[['ajuda','Chamar obstetra sénior'],['bloco','Transferir para o bloco'],['puxos_ini','Iniciar puxos'],['puxos_stop','Suspender puxos'],['inst','Parto vaginal instrumentado'],['ces2','Cesariana urgente (cat. 2)'],['ces1','Cesariana emergente (cat. 1)']]],
 ];
 const ACT_LABEL=Object.fromEntries(ACTS.flatMap(g=>g[1]));
@@ -409,12 +473,14 @@ function evaluate(sim){
   const acutes=[...sim.acuteHist,...(sim.acute?[sim.acute]:[])];
   for(const ac of acutes){
     const t0=ac.cause==='descolamento'?ac.start+4:ac.start,acc=ACCIDENTS.includes(ac.cause);
-    const NAME={hipotensao:'hipotensão materna',hipertonia:'hipertonia uterina',prolapso:'prolapso do cordão',rotura:'rotura uterina',descolamento:'descolamento da placenta'}[ac.cause];
-    const a1=has(['toque','vitais','lat_e','lat_d','genu','ajuda','eco','oxy_stop'],t0,t0+4);
+    const NAME={hipotensao:'hipotensão materna',hipertonia:'hipertonia uterina',prolapso:'prolapso do cordão',rotura:'rotura uterina',descolamento:'descolamento da placenta',vasa:'rotura de vasa prévia',eclampsia:'convulsão eclâmptica'}[ac.cause];
+    const a1=has(['toque','vitais','lat_e','lat_d','genu','ajuda','eco','oxy_stop','mgso4','eletrodo'],t0,t0+4);
     crit.push({k:`Reconhecimento precoce (${NAME})`,ok:!!a1,d:a1?`Primeira ação dirigida às ${a1.clock} (${Math.max(0,Math.round(a1.tm-t0))} min).`:'Sem avaliação dirigida nos primeiros 4 min.'});
     if(!acc){
-      const fix=ac.cause==='hipotensao'?['fluidos','vaso']:['oxy_stop','terb'];
-      const a2=has(fix,t0,t0+6);crit.push({k:'Correção da causa reversível',ok:!!a2,d:a2?`${a2.lab} às ${a2.clock}.`:`Sem ${ac.cause==='hipotensao'?'fluidos/vasopressor':'suspensão da ocitocina/tocólise'} nos primeiros 6 min.`});
+      const fix=ac.cause==='hipotensao'?['fluidos','vaso']:ac.cause==='eclampsia'?['mgso4']:['oxy_stop','terb'];
+      const a2=has(fix,t0,t0+6);crit.push({k:ac.cause==='eclampsia'?'Sulfato de magnésio após a convulsão':'Correção da causa reversível',ok:!!a2,d:a2?`${a2.lab} às ${a2.clock}.`:`Sem ${ac.cause==='hipotensao'?'fluidos/vasopressor':ac.cause==='eclampsia'?'sulfato de magnésio':'suspensão da ocitocina/tocólise'} nos primeiros 6 min.`});
+      if(ac.cause==='eclampsia'){const cz=A.find(x=>['ces1','ces2','inst'].includes(x.id)&&x.tm>=t0&&x.tm<=t0+12);const mg=A.find(x=>x.id==='mgso4');
+        crit.push({k:'Estabilizar a mãe antes de decidir o parto',ok:!(cz&&(!mg||mg.tm>cz.tm)),d:cz?`${cz.lab} às ${cz.clock}${mg&&mg.tm<=cz.tm?', depois do sulfato de magnésio.':', antes de estabilizar a mãe.'}`:'Sem decisão de parto durante a convulsão e a desaceleração que se lhe seguiu.'})}
       if(ac.resolved){const late=A.find(x=>['ces1','ces2'].includes(x.id)&&x.tm>ac.resolved+2&&x.q!=='good');if(late)crit.push({k:'Evitar cesariana após recuperação',ok:false,d:`Cesariana decidida às ${late.clock} depois da recuperação do traçado.`})}
       else{const a3=has(['ces1','inst','ces2'],t0,t0+11);crit.push({k:'Decisão de parto sem recuperação (regra 3-6-9-12-15)',ok:!!a3,d:a3?`Decisão às ${a3.clock}.`:'Sem decisão de parto até aos 11 min de desaceleração.'})}
     }else{
@@ -432,7 +498,12 @@ function evaluate(sim){
   // descompensação
   const dec=H.find(h=>h.pH<7.10&&!h.pro);
   if(dec){const d=sim.decision;crit.push({k:'Parto antes da descompensação fetal',ok:!!(d&&d.at<=dec.tm+10),d:d?`Decisão às ${tfmt(d.at)}; sinais de descompensação desde as ${tfmt(dec.tm)}.`:`Sinais de descompensação desde as ${tfmt(dec.tm)} sem decisão de parto.`})}
-  // febre
+  // artefactos e gémeos
+  if(sim.flags.dblAt!=null){const a=has(['eletrodo','eco','oximetro'],sim.flags.dblAt,sim.flags.dblAt+6);crit.push({k:'Suspeitar de duplicação da FCF',ok:!!a,d:a?`${a.lab} às ${a.clock}: FCF real confirmada.`:`Desde as ${tfmt(sim.flags.dblAt)}, o monitor contava a dobrar uma bradicardia, sem confirmação nos 6 min seguintes.`})}
+  if(sim.cs.twin&&sim.cs.ev&&sim.cs.ev.some(x=>x.coinc)){const ca=sim.cs.ev.find(x=>x.coinc).at;if(dur>ca+2){const a=has(['sonda2','eco'],ca,ca+20);crit.push({k:'Coincidência dos canais: confirmar dois fetos',ok:!!a,d:a?`${a.lab} às ${a.clock} (${Math.round(a.tm-ca)} min depois de os traçados se sobreporem).`:`Os dois canais registaram o mesmo feto desde as ${tfmt(ca)} sem confirmação nos 20 min seguintes.`})}}
+  if(sim.e2){let bS=null;for(let tm=0;tm<=dur;tm+=2.5){if(sim.twinBAt(sim.t0+tm*60)==='P'){bS=tm;break}}
+    if(bS!=null){const a=has(['ces1','ces2','inst'],bS-10,bS+35);crit.push({k:'Gémeo B: decisão perante traçado patológico',ok:!!a,d:a?`Gémeo B patológico desde as ${tfmt(bS)}; ${a.lab.toLowerCase()} às ${a.clock}.`:`Gémeo B com desacelerações tardias repetitivas desde as ${tfmt(bS)} sem decisão de parto nos 35 min seguintes.`})}}
+  // febre (avaliação)
   const fev=H.find(h=>h.temp>=38);
   if(fev){const a=has(['abx'],fev.tm-30,fev.tm+60);crit.push({k:'Febre intraparto: antibioterapia',ok:!!a,d:a?`Antibioterapia às ${a.clock}.`:`Temperatura ≥38 °C desde as ${tfmt(fev.tm)} sem antibioterapia na hora seguinte.`})}
   // sinal materno
@@ -449,7 +520,7 @@ function evaluate(sim){
   const revPct=rt?rp/rt:0;
   const cPass=crit.filter(c=>c.ok).length,cPct=crit.length?cPass/crit.length:0;
   const o=sim.outcome;let oPts=0;
-  if(o&&o.born){oPts=o.pHa>=7.2?30:o.pHa>=7.1?22:o.pHa>=7.0?12:0;if(sim.cs.fet.sinus)oPts=sim.decision?30:8;if(sim.cs.fet.fever&&!sim.st.abx)oPts=Math.max(0,oPts-10)}
+  if(o&&o.born){const ph=o.b2?Math.min(o.pHa,o.b2.pHa):o.pHa;oPts=ph>=7.2?30:ph>=7.1?22:ph>=7.0?12:0;if(sim.cs.fet.sinus)oPts=sim.decision?30:8;if(sim.cs.fet.fever&&!sim.st.abx)oPts=Math.max(0,oPts-10)}
   if(badDel)oPts=Math.max(0,oPts-12);
   const score=Math.round(cPct*40+revPct*30+oPts);
   return{crit,revPct,cPct,oPts,score,evals};

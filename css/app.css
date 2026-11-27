@@ -387,3 +387,4 @@ body.aluno .pgcard{display:none}
 .errr .ebadge{justify-self:start}
 .errr .es{grid-column:2/-1;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 @media (max-width:640px){.errr{grid-template-columns:1fr 40px}.errr .ebadge{grid-column:1/-1;justify-self:start}.errr .ebadge{justify-self:start}.errr .eb{display:none}.errr .es{grid-column:1/-1}}
+.twin2{display:flex;gap:12px;font-size:.66em;line-height:1.2}.twin2 .b{color:#4FC3CF}

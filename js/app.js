@@ -63,7 +63,7 @@ function showPause(it,review){
   $('wPauseBar').classList.add('on');$('wPlay').textContent='Retomar';
 }
 function renderActs(){
-  $('wActs').innerHTML=ACTS.map(([g,list])=>`<div class="agrp"><h4>${g}</h4><div class="abtns">${list.map(([id,l])=>`<button data-a="${id}" class="${['ces1','ces2','inst'].includes(id)?'dec':''}">${l}</button>`).join('')}</div></div>`).join('');
+  $('wActs').innerHTML=ACTS.map(([g,list])=>`<div class="agrp"><h4>${g}</h4><div class="abtns">${list.filter(([id])=>id!=='sonda2'||W.cs.twin).map(([id,l])=>`<button data-a="${id}" class="${['ces1','ces2','inst'].includes(id)?'dec':''}">${l}</button>`).join('')}</div></div>`).join('');
 }
 $('wActs').onclick=e=>{const b=e.target.closest('button');if(!b||b.disabled||!W.sim)return;
   const id=b.dataset.a;
@@ -87,7 +87,8 @@ function uiState(force){
   const sim=W.sim,st=sim.st,e=sim.e;
   $('wClock').textContent=sim.clock();$('wElapsed').textContent='decorridos '+fmt(Math.max(0,sim.tmin()*60));
   const lastF=(()=>{for(let i=e.F.length-1;i>=Math.max(0,e.F.length-6);i--){const v=e.F[i];if(v===v)return v}return NaN})();
-  $('dFcf').innerHTML=lastF===lastF?Math.round(lastF)+' <small>bpm</small>':'---';
+  const lastB=e.F2?e.F2[e.F2.length-1]:null,fb=v=>v===v?Math.round(v):'---';
+  $('dFcf').innerHTML=e.F2?`<span class="twin2"><span>A ${fb(lastF)}</span><span class="b">B ${fb(lastB)}</span></span>`:(lastF===lastF?Math.round(lastF)+' <small>bpm</small>':'---');
   $('dFcm').innerHTML=st.oxi?Math.round(e.M[e.M.length-1])+' <small>bpm</small>':'<small>sem oxímetro</small>';
   $('dToco').textContent=Math.round(e.T[e.T.length-1]);
   $('dSig').innerHTML=st.scalp?'ECG (elétrodo)':'Ultrassons<br><small style="color:#7F93A8">externo</small>';
@@ -179,7 +180,7 @@ function showDebrief(){
   const cls=v=>v==null?'':v<7.0?'bad':v<7.1?'warn':v<7.2?'warn':'good';
   const tiles=o.born?[
     ['Via de parto',o.label.replace(/ \(.*\)/,''),o.label.match(/\((.*)\)/)?.[1]||''],['Nascimento',o.clock,`${Math.round(o.tm)} min de caso`],['Apgar',`${o.a1}/${o.a5}`,'1.º / 5.º minuto'],
-    ['pH artéria',num(o.pHa,2),`veia ${num(o.pHv,2)}`,cls(o.pHa)],['Défice de bases',num(o.be),'mmol/L',o.be<=-12?'bad':o.be<=-8?'warn':'good'],['Lactato',num(o.lact),'mmol/L',o.lact>=6?'bad':o.lact>=4?'warn':'good']
+    ['pH artéria'+(o.b2?' (gémeo A)':''),num(o.pHa,2),`veia ${num(o.pHv,2)}`,cls(o.pHa)],...(o.b2?[['pH artéria (gémeo B)',num(o.b2.pHa,2),`Apgar ${o.b2.a1}/${o.b2.a5}`,cls(o.b2.pHa)]]:[]),['Défice de bases',num(o.be),'mmol/L',o.be<=-12?'bad':o.be<=-8?'warn':'good'],['Lactato',num(o.lact),'mmol/L',o.lact>=6?'bad':o.lact>=4?'warn':'good']
   ]:[['Desfecho','Sem parto',o.notes[0]||''],['Hora',o.clock,`${Math.round(o.tm)} min de caso`],['pH fetal estimado',num(sim.st.pH,2),'no fim do caso',cls(sim.st.pH)]];
   const dur=Math.max(30,Math.ceil(sim.tmin()));
   $('wDeb').innerHTML=`

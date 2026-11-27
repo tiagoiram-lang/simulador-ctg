@@ -32,6 +32,10 @@ function errsFromCase(sim,ev){
     else if(REV_K[f.k])add(REV_K[f.k],`Revisão das ${r.clock}: ${f.k.toLowerCase()} — respondeu «${f.a}», correto «${f.tr}».`,r.clock)}
   for(const c of ev.crit){if(c.ok)continue;const k=c.k;let code=null;
     if(/Revisão sistemática/.test(k))code='vigil';
+    else if(/Coincidência|duplicação/.test(k))code='sinal';
+    else if(/Estabilizar a mãe/.test(k))code='inter';
+    else if(/Sulfato de magnésio/.test(k))code='causa';
+    else if(/Gémeo B/.test(k))code='tardia';
     else if(/taquissistolia|Ocitocina num feto|protocolo de ocitocina|Correção da causa/.test(k))code='causa';
     else if(/Evitar atrasos|Reconhecimento precoce|sem recuperação|Parto imediato|traçado patológico|descompensação|sinusoidal/.test(k))code='tardia';
     else if(/Evitar cesariana|sem evidência|Decisão de parto justificada/.test(k))code='inter';
@@ -61,12 +65,13 @@ function errProfile(cases,drills){
 /* que casos treinam cada categoria de decisão */
 function caseSkills(cs){
   const f=cs.fet,txt=(cs.ideal||[]).join(' ')+' '+(cs.tag||''),s=new Set();
-  if(f.mhrCapture)s.add('sinal');
+  if(f.mhrCapture||f.dblArt||cs.twin)s.add('sinal');
+  if(cs.twin||cs.vasaRisk||cs.preecl)s.add('tardia');
   if(f.fever)s.add('infec');
   if(cs.protocolOxy||cs.start.oxy>0||f.spont>4.8)s.add('causa');
   if(cs.dif==='Avançado'||f.reserve<.7||cs.prolapseRisk||f.sinus)s.add('tardia');
   if(/[Nn]ão intervir|[Nn]ão decidir|[Ee]vitar a cesariana|[Nn]ão acelerar|sem intervenções|[Nn]ão está indicad/.test(txt))s.add('inter');
-  if(/sono fetal|magnésio|febre|taquicardia|linha de base/.test(txt))s.add('mech');
+  if(/sono fetal|magnésio|febre|taquicardia|linha de base|petidina|betametasona|extrassístoles/.test(txt))s.add('mech');
   return s;
 }
 function errSuggest(code){
