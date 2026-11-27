@@ -278,7 +278,7 @@ function examItems(set){
 function setDrillMode(m){D.mode=m;document.querySelectorAll('#dMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('dStatsLivre').style.display=m==='livre'?'':'none';if(m==='livre'){D.exam=null;newDrill()}else renderExamHome()}
 function renderExamHome(){
   if(typeof LV!=='undefined'&&LV.role==='aluno'){$('dForm').innerHTML='<p>Exame terminado. Pode fechar esta página.</p>';return}
-  D.cur=null;D.done=false;const {c,W,H}=fitCanvas($('cvD'));c.fillStyle='#FFF8F4';c.fillRect(0,0,W,H);c.fillStyle='#7A5A50';c.font='15px "IBM Plex Sans",sans-serif';c.textAlign='center';c.fillText('O traçado aparece quando iniciar o exame.',W/2,H/2);
+  D.cur=null;D.done=false;const {c,W,H}=fitCanvas($('cvD'));c.fillStyle='#FFF8F4';c.fillRect(0,0,W,H);c.fillStyle='#7A5A50';c.font='15px "Geist",sans-serif';c.textAlign='center';c.fillText('O traçado aparece quando iniciar o exame.',W/2,H/2);
   $('dLayers').style.display='none';$('dExpl').classList.remove('on');
   $('dTitle').textContent='Modo exame';$('dCtx').textContent=`${EXAM_N} traçados, sem correção até ao fim. Os conjuntos são fixos: todas as pessoas que fizerem o mesmo conjunto veem exatamente os mesmos traçados.`;
   const hist=(store('ctg-exam')||[]).slice(-5).reverse();

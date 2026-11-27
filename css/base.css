@@ -3,7 +3,7 @@
   /* Mundo clínico único: papel de CTG sobre bancada clara; azul-marinho estrutura, cian marca, cores semânticas só para estado */
   --navy:#193856; --cyan:#0098BC; --ink:#1D2433; --muted:#5D6B7C; --bg:#F3F6F9; --card:#FFFFFF; --line:#DFE5EC;
   --paper:#FFF8F4; --ok:#2E8B57; --okbg:#E6F4EC; --warn:#C27A12; --warnbg:#FBF1E0; --bad:#C23B32; --badbg:#FBE8E6;
-  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --f-body:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"Geist Mono",ui-monospace,Menlo,monospace;
   color-scheme:light;
 }
 *{box-sizing:border-box}

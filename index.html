@@ -6,29 +6,74 @@
 <title>Simulador CTG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%2315263B%27/%3E%3Cpath d=%27M4 15h7l2.5-3 2.5 9 2.5-6H26%27 fill=%27none%27 stroke=%27%2350C8D3%27 stroke-width=%272.4%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/brand.css">
 </head>
 <body>
-<header>
-  <div class="brand">
-    <h1>Cardiotocografia <span>· para além da linha</span></h1>
-    <p>Simulador de vigilância fetal intraparto · FIGO 2015 e abordagem fisiológica</p>
-  </div>
-  <nav id="nav">
-    <a href="#sala" data-v="sala" class="on">Sala de partos</a>
+<header class="top">
+  <a class="brand" href="#inicio" aria-label="Para além da linha · início">
+    <svg class="mark" viewBox="0 0 40 32" aria-hidden="true">
+      <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="8" class="mk-box"/>
+      <path class="mk-grid" d="M8 1v30M16 1v30M24 1v30M1 10h30M1 22h30"/>
+      <path class="mk-trace" d="M3 14.5h5.5l1.8-2.2 1.8 2.2h3.2l2.6 7.5 2.6-5.2 2-2.3H39"/>
+      <circle class="mk-dot" cx="39" cy="14.5" r="1.6"/>
+    </svg>
+    <span class="wm"><b>Para além da linha</b><small>Simulador de CTG intraparto</small></span>
+  </a>
+  <nav id="nav" aria-label="Secções">
+    <a href="#sala" data-v="sala">Sala de partos</a>
     <a href="#treino" data-v="treino">Treino rápido</a>
     <a href="#reais" data-v="reais">Traçados reais</a>
     <a href="#demo" data-v="monitor">Demonstração</a>
     <a href="#construtor" data-v="construtor">Construtor</a>
-    <a href="#referencia" data-v="referencia">Referência FIGO</a>
+    <a href="#referencia" data-v="referencia">Referência</a>
     <a href="#resultados" data-v="resultados">Resultados</a>
     <a href="#sobre" data-v="sobre">Sobre</a>
-    <button class="fsbtn" id="fsBtn" type="button" aria-pressed="false" title="Mostrar a plataforma em ecrã inteiro">⛶ Ecrã inteiro</button>
   </nav>
+  <button class="fsbtn" id="fsBtn" type="button" aria-pressed="false" title="Mostrar a plataforma em ecrã inteiro">
+    <svg class="ic-on" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>
+    <svg class="ic-off" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/></svg>
+    <span class="fstx">Ecrã inteiro</span>
+  </button>
 </header>
 <main>
+
+<!-- ============ INÍCIO ============ -->
+<section class="view" id="v-inicio">
+  <div class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Vigilância fetal intraparto · formação</p>
+      <h1 class="hero-title">Ler o CTG para além da linha.</h1>
+      <p class="hero-lede">Casos clínicos que evoluem com as suas decisões, traçados reais com o desfecho do recém-nascido e treino de classificação segundo a FIGO, a ACOG e a NICE. Para estudar sozinho ou corrigir em turma, no computador ou no telemóvel.</p>
+      <div class="hero-cta">
+        <a class="cta pri" href="#sala">Entrar na sala de partos<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/></svg></a>
+        <a class="cta" href="#treino">Treino rápido</a>
+      </div>
+      <dl class="hero-facts" id="heroFacts"></dl>
+    </div>
+    <figure class="hero-mon" aria-label="Traçado de CTG gerado em tempo real pelo simulador">
+      <div class="hm-top">
+        <div class="hm-read"><span class="hm-k">FCF</span><span class="hm-v" id="hmF">—</span><span class="hm-u">bpm</span></div>
+        <div class="hm-read hm-c"><span class="hm-k">Toco</span><span class="hm-v" id="hmT">—</span></div>
+        <span class="hm-live"><i></i>simulação em curso</span>
+      </div>
+      <canvas id="cvHero" aria-hidden="true"></canvas>
+      <figcaption>Traçado gerado ao vivo pelo motor do simulador, calibrado com a variabilidade de 552 partos reais.</figcaption>
+    </figure>
+  </div>
+
+  <div class="mods" id="homeMods">
+    <a class="mod m-sala" href="#sala"><span class="mn">01</span><h2>Sala de partos</h2><p>Onze parturientes com história própria. Vigie o traçado, responda à equipa, faça revisões estruturadas e decida. O feto responde ao que fizer; no fim recebe a gasimetria do cordão e a análise de cada decisão.</p><ul class="mcases" id="homeCases" aria-label="Alguns dos casos"></ul><span class="go">Escolher um caso</span></a>
+    <a class="mod m-treino" href="#treino"><span class="mn">02</span><h2>Treino rápido</h2><p>Padrões de 30 minutos para classificar campo a campo, com correção anotada no próprio traçado.</p><span class="go">Treinar</span></a>
+    <a class="mod m-reais" href="#reais"><span class="mn">03</span><h2>Traçados reais</h2><p>Os 552 partos da base CTU-UHB, com pH do cordão, Apgar e via de parto.</p><span class="go">Abrir a biblioteca</span></a>
+    <a class="mod m-exame" href="#treino" data-exam="1"><span class="mn">04</span><h2>Exame em sala</h2><p>Projete um QR code; cada formando responde no telemóvel e os resultados e erros mais frequentes da turma aparecem no ecrã.</p><span class="go">Preparar um exame</span></a>
+    <a class="mod m-ref" href="#referencia"><span class="mn">05</span><h2>Referência</h2><p>Critérios FIGO 2015 lado a lado com ACOG e NICE, com exemplos desenhados.</p><span class="go">Consultar</span></a>
+  </div>
+  <p class="home-src">Dados reais: CTU-UHB Intrapartum Cardiotocography Database (Chudáček et al., 2014), PhysioNet, licença ODC-By. Diretrizes: FIGO 2015, ACOG CPG n.º 10 (2025), NICE NG229 (2025).</p>
+</section>
 
 <!-- ============ SALA DE PARTOS ============ -->
 <section class="view on" id="v-sala">
@@ -96,7 +141,7 @@
 <!-- ============ TRAÇADOS REAIS ============ -->
 <section class="view" id="v-reais">
   <div class="card qhead" style="margin-bottom:12px">
-    <div><h2 style="margin:0">Traçados reais anonimizados</h2><div class="small">134 partos da base CTU-UHB (Hospital Universitário de Brno), com o desfecho neonatal real. Sinal reduzido a 1 amostra por segundo.</div></div>
+    <div><h2 style="margin:0">Traçados reais anonimizados</h2><div class="small">Os 552 partos da base CTU-UHB (Hospital Universitário de Brno), com o desfecho neonatal real. Sinal reduzido a 1 amostra por segundo; cada traçado descarrega-se quando o abre.</div></div>
     <div class="seg" id="rMode"><button data-m="lib" class="on">Biblioteca</button><button data-m="ch">Desafio: adivinhe o desfecho</button></div>
   </div>
   <div class="card notes" id="rLoad" style="display:none"></div>
@@ -369,6 +414,7 @@
 <script src="js/real.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="js/live.js"></script>
+<script src="js/home.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

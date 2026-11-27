@@ -1,14 +1,25 @@
 /* Traçados reais anonimizados (CTU-UHB, PhysioNet): biblioteca e desafio */
 const R={meta:null,auto:false,data:null,loading:null,mode:'lib',cur:null,win:20,pos:0,reveal:false,ch:null,chWin:30,seen:[],
-  f:{ph:'all',via:'all',ga:'all',sig:'all',ind:false,mec:false,show:false}};
+  f:{ph:'all',via:'all',ga:'all',sig:'all',q:'all',ind:false,mec:false,show:false},chunks:{},tok:0};
 const PH_BANDS={all:'Todos os pH',lt705:'< 7,05',b715:'7,05–7,14',b720:'7,15–7,19',ge720:'≥ 7,20'};
 const yn=v=>v===1?'sim':v===0?'não':'—';
 const ph2=v=>v.toFixed(2).replace('.',',');
 function realLoad(){
   if(R.data)return Promise.resolve();
-  if(!R.loading)R.loading=fetch('data/ctu.json').then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{R.data=j.recs;R.meta=j.meta||null}).catch(e=>{R.loading=null;throw e});
+  if(!R.loading)R.loading=fetch('data/ctu-index.json').then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{R.data=j.recs;R.meta=j.meta||null}).catch(e=>{R.loading=null;throw e});
   return R.loading;
 }
+/* o sinal de cada registo está em blocos de ~46 partos (≈0,6 MB), descarregados só quando são precisos */
+function realChunk(c){
+  if(!R.chunks[c])R.chunks[c]=fetch(`data/ctu-${c}.json`).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).catch(e=>{delete R.chunks[c];throw e});
+  return R.chunks[c];
+}
+function realSig(m){
+  if(m.b64)return Promise.resolve(m);
+  return realChunk(m.c).then(part=>{const x=part[m.id];if(!x)throw new Error('sem sinal');m.b64=x.b64;m.bl=x.bl;m.dd=x.dd;return m});
+}
+const qLab=q=>q>0.3?`sinal com falhas (${Math.round(q*100)}% em falta nos últimos 30 min)`:'';
+function cvWait(cv,txt){const {c,W,H}=fitCanvas(cv);c.fillStyle='#FFF8F4';c.fillRect(0,0,W,H);c.fillStyle='#8A8F98';c.font='13px system-ui,sans-serif';c.textAlign='center';c.fillText(txt,W/2,H/2)}
 function realEng(m){
   if(m._e)return m._e;
   const raw=atob(m.b64),n=m.n,F=new Array(2*n),T=new Array(2*n);
@@ -22,6 +33,7 @@ function sigLab(rt){return rt===2?'Elétrodo de escalpe (ECG)':rt===12?'Ultrasso
 function ctxChips(m){
   const ch=[`${m.age|0} anos`,`${m.ga|0} semanas`,`G${m.grav|0}P${m.par|0}`,sigLab(m.rt)];
   if(m.ind===1)ch.push('Trabalho de parto induzido');if(m.mec===1)ch.push('Líquido meconial');if(m.pyr===1)ch.push('Febre materna');
+  if(m.q30>0.3)ch.push(`Sinal com ${Math.round(m.q30*100)}% em falta (últimos 30 min)`);
   if(m.diab===1)ch.push('Diabetes');if(m.hta===1)ch.push('Hipertensão');if(m.pe===1)ch.push('Pré-eclâmpsia');
   return ch.map(c=>`<span class="cchip">${esc(c)}</span>`).join('');
 }
@@ -42,15 +54,19 @@ function outcomeHTML(m){
 /* ---------- biblioteca ---------- */
 function realFiltered(){
   const f=R.f;return R.data.filter(m=>(f.ph==='all'||phBand(m.pH)===f.ph)&&(f.via==='all'||(f.via==='ces')===(m.dt===2))&&
-    (f.ga==='all'||(f.ga==='lt39'?m.ga<39:f.ga==='39_40'?m.ga>=39&&m.ga<=40:m.ga>40))&&(f.sig==='all'||(f.sig==='us'?m.rt===1:m.rt!==1))&&(!f.ind||m.ind===1)&&(!f.mec||m.mec===1));
+    (f.ga==='all'||(f.ga==='lt39'?m.ga<39:f.ga==='39_40'?m.ga>=39&&m.ga<=40:m.ga>40))&&(f.sig==='all'||(f.sig==='us'?m.rt===1:m.rt!==1))&&(f.q==='all'||(f.q==='boa'?m.q30<=0.15:f.q==='media'?m.q30>0.15&&m.q30<=0.3:m.q30>0.3))&&(!f.ind||m.ind===1)&&(!f.mec||m.mec===1));
 }
 function renderRealList(){
   const L=realFiltered();$('rlCount').textContent=`${L.length} de ${R.data.length} registos`;
-  $('rlList').innerHTML=L.map(m=>`<button class="rli ${R.cur===m?'on':''}" data-id="${m.id}"><span><b>Registo ${m.id}</b><small>${m.ga|0} sem · G${m.grav|0}P${m.par|0}${m.ind===1?' · induzido':''}${m.mec===1?' · mecónio':''}</small></span>${R.f.show?`<span class="phc ${phCls(m.pH)}">${ph2(m.pH)}</span>`:''}</button>`).join('')||'<p class="small">Nenhum registo com estes filtros.</p>';
+  $('rlList').innerHTML=L.map(m=>`<button class="rli ${R.cur===m?'on':''}" data-id="${m.id}"><span><b>Registo ${m.id}</b><small>${m.ga|0} sem · G${m.grav|0}P${m.par|0}${m.ind===1?' · induzido':''}${m.mec===1?' · mecónio':''}${m.q30>0.3?' · <span class="qwarn">sinal com falhas</span>':''}</small></span>${R.f.show?`<span class="phc ${phCls(m.pH)}">${ph2(m.pH)}</span>`:''}</button>`).join('')||'<p class="small">Nenhum registo com estes filtros.</p>';
 }
 function openReal(id){
-  const m=R.data.find(x=>x.id===+id);if(!m)return;R.cur=m;R.pos=0;R.reveal=false;
-  const e=realEng(m);
+  const m=R.data.find(x=>x.id===+id);if(!m)return;R.cur=m;R.pos=0;R.reveal=false;const tok=++R.tok;
+  $('rlTitle').textContent=`Registo ${m.id}`;$('rlChips').innerHTML=ctxChips(m);$('rlOut').innerHTML='';renderRealList();
+  if(!m.b64)cvWait($('cvReal'),'A carregar o traçado…');
+  realSig(m).then(()=>{if(tok===R.tok)openReal2(m)}).catch(()=>{if(tok===R.tok)cvWait($('cvReal'),'Não foi possível carregar este traçado. Verifique a ligação e tente de novo.')});
+}
+function openReal2(m){
   $('rlTitle').textContent=`Registo ${m.id}`;$('rlChips').innerHTML=ctxChips(m);
   $('rlSub').textContent=`${Math.round(m.n/60)} min de registo até ao parto${m.ii?` · expulsivo nos últimos ${Math.round((m.n-m.ii)/60)} min`:''}`;
   $('rlOut').innerHTML=`<button class="btn pri" id="rlReveal">Revelar desfecho</button>`;$('rlReveal').onclick=()=>{R.reveal=true;$('rlOut').innerHTML=outcomeHTML(m)};
@@ -61,7 +77,7 @@ function realAnnot(m){
   return{layers:{base:true,dec:true},baseArr:m.bl||[],baseT0:0,decels:(m.dd||[]).map(d=>({s:d[0],e:d[1],nadir:d[2],depth:d[3],cls:'det',lab:'−'+d[3]})),accs:[],contr:[]};
 }
 function drawReal(){
-  if(!R.cur)return;const e=realEng(R.cur);
+  if(!R.cur||!R.cur.b64)return;const e=realEng(R.cur);
   drawCTG($('cvReal'),e,{tEnd:e.t-R.pos*60,win:R.win*60,tZero:e.t,marks:true,labEvery:R.win>=60?600:300,annot:R.auto?realAnnot(R.cur):null});
   $('rlAuto').classList.toggle('on',R.auto);$('rlAutoTx').style.display=R.auto?'':'none';
   $('rlPosTx').textContent=R.pos>0?`até ${R.pos} min antes do fim`:'fim do registo (parto)';
@@ -72,12 +88,13 @@ function initRealLib(){
     <label>pH<select id="fPh">${Object.entries(PH_BANDS).map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select></label>
     <label>Via de parto<select id="fVia"><option value="all">Todas</option><option value="vag">Vaginal</option><option value="ces">Cesariana</option></select></label>
     <label>Idade gestacional<select id="fGa"><option value="all">Todas</option><option value="lt39">&lt; 39 sem</option><option value="39_40">39–40 sem</option><option value="gt40">&gt; 40 sem</option></select></label>
+    <label>Qualidade do sinal<select id="fQ"><option value="all">Todas</option><option value="boa">Boa (≤ 15% em falta)</option><option value="media">Razoável (15–30%)</option><option value="falhas">Com falhas (&gt; 30%)</option></select></label>
     <label>Sinal<select id="fSig"><option value="all">Todos</option><option value="us">Ultrassons</option><option value="ecg">Elétrodo de escalpe</option></select></label>
     <label class="chk"><input type="checkbox" id="fInd"> Só induzidos</label>
     <label class="chk"><input type="checkbox" id="fMec"> Só com mecónio</label>
     <label class="chk"><input type="checkbox" id="fShow"> Mostrar o pH na lista</label>`;
   const bind=(id,k,chk)=>$(id).onchange=e=>{f[k]=chk?e.target.checked:e.target.value;renderRealList()};
-  bind('fPh','ph');bind('fVia','via');bind('fGa','ga');bind('fSig','sig');bind('fInd','ind',1);bind('fMec','mec',1);bind('fShow','show',1);
+  bind('fPh','ph');bind('fVia','via');bind('fGa','ga');bind('fSig','sig');bind('fQ','q');bind('fInd','ind',1);bind('fMec','mec',1);bind('fShow','show',1);
   $('rlList').onclick=e=>{const b=e.target.closest('.rli');if(b)openReal(b.dataset.id)};
   $('rlWin').onclick=e=>{const b=e.target.closest('button');if(!b||!R.cur)return;R.win=+b.dataset.w;document.querySelectorAll('#rlWin button').forEach(x=>x.classList.toggle('on',x===b));$('rlPos').max=Math.max(0,Math.floor(R.cur.n/60)-R.win);R.pos=Math.min(R.pos,+$('rlPos').max);$('rlPos').value=$('rlPos').max-R.pos;drawReal()};
   $('rlAuto').onclick=()=>{R.auto=!R.auto;drawReal()};
@@ -88,8 +105,15 @@ function initRealLib(){
 /* ---------- desafio ---------- */
 const DEC_R={vigiar:'Manter vigilância',corrigir:'Corrigir causas reversíveis e reavaliar',acelerar:'Acelerar o parto'};
 function chStats(){return store('ctg-real')||[]}
+/* sorteio: só sinais legíveis (≤ 30% em falta nos últimos 30 min) e cerca de 4 em cada 10 com acidemia, para haver casos que ensinam */
+function chPick(){
+  const ok=R.data.filter(m=>m.q30<=0.3&&!R.seen.includes(m.id));
+  const ac=ok.filter(m=>m.pH<7.15),no=ok.filter(m=>m.pH>=7.15);
+  const pool=(Math.random()<0.4&&ac.length)?ac:(no.length?no:ok);
+  return pool[Math.floor(Math.random()*pool.length)]||R.data[0];
+}
 function newChallenge(){
-  const pool=R.data.filter(m=>!R.seen.includes(m.id));const m=pool[Math.floor(Math.random()*pool.length)]||R.data[0];
+  const m=chPick();
   R.seen=[m.id,...R.seen].slice(0,40);R.ch={m,done:false};
   const G=D.guide;
   $('rcTitle').textContent='Desafio · adivinhe o desfecho';$('rcChips').innerHTML=ctxChips(m);
@@ -103,14 +127,16 @@ function newChallenge(){
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="rcGo">Revelar desfecho</button><button class="btn" id="rcSkip">Outro traçado</button></div><div class="small" id="rcMsg" style="color:var(--bad)"></div>`;
   $('xGuideR').onclick=e=>{const b=e.target.closest('button');if(!b||R.ch.done)return;D.guide=b.dataset.g;store('ctg-guide',D.guide);document.querySelectorAll('#xGuideR button').forEach(x=>x.classList.toggle('on',x===b));$('rcCls').innerHTML=radios('rcCls',CLS_OPTS[D.guide])};
   $('rcGo').onclick=submitChallenge;$('rcSkip').onclick=newChallenge;
-  drawChallenge();renderChStats();
+  renderChStats();const tok=++R.tok;
+  if(!m.b64)cvWait($('cvRealC'),'A carregar o traçado…');
+  realSig(m).then(()=>{if(tok===R.tok&&R.ch&&R.ch.m===m)drawChallenge()}).catch(()=>{if(R.ch&&R.ch.m===m)cvWait($('cvRealC'),'Não foi possível carregar este traçado. Carregue em «Outro traçado».')});
 }
-function drawChallenge(){if(!R.ch)return;const e=realEng(R.ch.m);drawCTG($('cvRealC'),e,{tEnd:e.t,win:R.chWin*60,tZero:e.t,marks:true,labEvery:R.chWin>=60?600:300})}
+function drawChallenge(){if(!R.ch||!R.ch.m.b64)return;const e=realEng(R.ch.m);drawCTG($('cvRealC'),e,{tEnd:e.t,win:R.chWin*60,tZero:e.t,marks:true,labEvery:R.chWin>=60?600:300})}
 function submitChallenge(){
   const g=n=>{const x=document.querySelector(`input[name=${n}]:checked`);return x?x.value:null};
   const a={cls:g('rcCls'),ac:g('rcAc'),conf:g('rcConf'),dec:g('rcDec')};
   if(!a.cls||a.ac==null||!a.conf||!a.dec){$('rcMsg').textContent='Responda a todas as perguntas.';return}
-  const m=R.ch.m;R.ch.done=true;$('rcMsg').textContent='';
+  const m=R.ch.m;if(!m.b64){$('rcMsg').textContent='Espere que o traçado termine de carregar.';return}R.ch.done=true;$('rcMsg').textContent='';
   document.querySelectorAll('#rcForm input').forEach(i=>i.disabled=true);
   const acid=m.pH<7.15,right=(a.ac==='1')===acid;
   const st=chStats();st.push({id:m.id,guide:D.guide,cls:a.cls,ac:+a.ac,conf:+a.conf,dec:a.dec,pH:m.pH,d:Date.now()});store('ctg-real',st.slice(-500));
@@ -144,7 +170,7 @@ function renderChStats(){
    </div>
    <h4 class="eg">A sua classificação e o pH real</h4>
    <table class="hist"><thead><tr><th>Diretriz</th><th>Classificação</th><th>Traçados</th><th>Com acidemia (&lt; 7,15)</th><th>Acidemia grave (&lt; 7,05)</th></tr></thead><tbody>${Object.values(byCls).sort((a,b)=>a.g.localeCompare(b.g)).map(r=>`<tr><td>${GUIDE[r.g]}</td><td>${CLS_OPTS[r.g][r.c]}</td><td class="n">${r.n}</td><td class="n">${r.ac} (${pct(r.ac,r.n)})</td><td class="n">${r.sev} (${pct(r.sev,r.n)})</td></tr>`).join('')}</tbody></table>
-   <p class="small">Neste desafio cerca de 4 em cada 10 traçados têm acidemia, para haver casos suficientes. Na base completa (552 partos) a proporção é de 19% com pH &lt; 7,15 e 7% com pH &lt; 7,05. <button class="linkbtn" id="rcReset">Apagar estatísticas</button></p>`;
+   <p class="small">Neste desafio cerca de 4 em cada 10 traçados têm acidemia, para haver casos suficientes. Na base completa (${R.data.length} partos) a proporção é de 19% com pH &lt; 7,15 e 7% com pH &lt; 7,05. <button class="linkbtn" id="rcReset">Apagar estatísticas</button></p>`;
   $('rcReset').onclick=e=>{const b=e.target;if(b.dataset.c){store('ctg-real',[]);renderChStats()}else{b.dataset.c=1;b.textContent='Confirmar: apagar'}};
 }
 
@@ -154,7 +180,7 @@ function setRealMode(m){R.mode=m;document.querySelectorAll('#rMode button').forE
 let realInit=false;
 function showReal(){
   if(realInit){R.mode==='lib'?drawReal():drawChallenge();return}
-  $('rLoad').style.display='';$('rLoad').textContent='A carregar 134 traçados reais…';
+  $('rLoad').style.display='';$('rLoad').textContent='A carregar a lista dos 552 traçados reais…';
   realLoad().then(()=>{realInit=true;$('rLoad').style.display='none';$('rBody').style.display='';initRealLib();
     $('rMode').onclick=e=>{const b=e.target.closest('button');if(b)setRealMode(b.dataset.m)};
     $('rcWin').onclick=e=>{const b=e.target.closest('button');if(!b)return;R.chWin=+b.dataset.w;document.querySelectorAll('#rcWin button').forEach(x=>x.classList.toggle('on',x===b));$('rcSub').textContent=$('rcSub').textContent.replace(/Últimos \d+ min/,`Últimos ${R.chWin} min`);drawChallenge()};

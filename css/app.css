@@ -248,3 +248,4 @@ body.aluno #dStatsLivre{display:none}
 .calib th,.calib td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 .calib th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
 .calib td.n{font-family:var(--f-mono)}
+.qwarn{color:#9A5B00;font-weight:600}
