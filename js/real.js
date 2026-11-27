@@ -99,7 +99,7 @@ function initRealLib(){
   $('rlWin').onclick=e=>{const b=e.target.closest('button');if(!b||!R.cur)return;R.win=+b.dataset.w;document.querySelectorAll('#rlWin button').forEach(x=>x.classList.toggle('on',x===b));$('rlPos').max=Math.max(0,Math.floor(R.cur.n/60)-R.win);R.pos=Math.min(R.pos,+$('rlPos').max);$('rlPos').value=$('rlPos').max-R.pos;drawReal()};
   $('rlAuto').onclick=()=>{R.auto=!R.auto;drawReal()};
   $('rlPos').oninput=e=>{R.pos=+$('rlPos').max-+e.target.value;drawReal()};
-  renderRealList();openReal(R.data[0].id);
+  renderRealList();openReal((R.data.find(m=>m.q30<=0.15)||R.data[0]).id);
 }
 
 /* ---------- desafio ---------- */
