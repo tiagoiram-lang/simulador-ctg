@@ -232,9 +232,9 @@ document.addEventListener('fullscreenchange',fsSync);
 /* ===================== NAVEGAÇÃO ===================== */
 const ROUTES={turmas:'turmas',inicio:'inicio',sala:'sala',treino:'treino',demo:'monitor',construtor:'construtor',referencia:'referencia',resultados:'resultados',sobre:'sobre',reais:'reais'};
 function show(h){
-  if(h&&h.startsWith('exame-')&&liveParticipant(h))return;
+  if(h&&h.startsWith('exame-')){if(typeof accGate==='function'&&accGate('exame'))return;if(liveParticipant(h))return}
   const tcode=h&&/^turma-[a-z0-9]{8}$/.test(h)?h.slice(6):null;if(tcode)h='turmas';
-  const v=ROUTES[h]?h:'inicio',id=ROUTES[v];document.body.dataset.view=v;
+  const v=ROUTES[h]?h:'inicio',id=ROUTES[v];if(typeof accGate==='function'&&accGate(v))return;document.body.dataset.view=v;
   document.querySelectorAll('main > .view').forEach(s=>s.classList.toggle('on',s.id==='v-'+id));
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+v));
   heroRun(v==='inicio');if(v==='referencia')initMinis();if(v==='construtor')figoEval(readB());if(v==='resultados')renderHist();if(v==='reais')showReal();if(v==='turmas'&&typeof showTurmas==='function')showTurmas(tcode);

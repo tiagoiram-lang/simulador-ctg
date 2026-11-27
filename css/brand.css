@@ -202,3 +202,16 @@ body.contas .ctas{display:flex!important}
 @media (max-width:900px){.tgrid,.tdtop{grid-template-columns:1fr}}
 @media (max-width:640px){.accbtn .acctx{display:none}.accbtn{padding:0 6px}}
 body.aluno .accbtn{display:none!important}
+/* acesso */
+.cta-out{display:none}
+body.contas:not(.logado) .cta-out{display:flex}
+body.contas:not(.logado) .cta-in{display:none}
+button.cta{font-family:inherit;cursor:pointer}
+.cta-ghost{border-color:transparent;background:transparent;color:var(--cyan)}
+.cta-ghost:hover{border-color:var(--line);background:#fff}
+.gate{max-width:1320px;margin:0 auto;padding:clamp(20px,6vw,72px) 0}
+.gatebox{max-width:520px;margin:0 auto;padding:32px 28px;border-radius:16px;text-align:left}
+.gatebox h2{font-size:24px;letter-spacing:-.02em;color:var(--ink-950);margin:14px 0 6px}
+.gatebox p{color:#4F5A69;line-height:1.55}
+.gico{width:40px;height:40px;padding:8px;border-radius:12px;background:var(--accent-soft);fill:none;stroke:var(--cyan);stroke-width:1.6;stroke-linecap:round}
+.gatecta{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 14px}

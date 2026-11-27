@@ -161,6 +161,7 @@ function liveParticipant(h){
     if(!LV.peer){LV.peer=rid(12);try{localStorage.setItem('ctg-peer-'+LV.sid,LV.peer)}catch(_){}}}
   else roomJoin().then(r=>{if(r)r.presence({role:'aluno',nome:'',i:0,ans:[],done:false}).catch(()=>{});liveStatus()});
   liveStatus();
+  if(typeof ACC!=='undefined'&&ACC.nome)$('alNome').value=ACC.nome.slice(0,30);
   $('alGo').onclick=()=>{const nome=$('alNome').value.trim().slice(0,30);LV.nome=nome;
     D.exam={set:LV.set,guide:LV.guide,items:examItems(LV.set),i:0,ans:[],t0:Date.now(),live:true};
     D.onAnswer=X=>liveSend({role:'aluno',nome:LV.nome,i:X.i,ans:X.ans.map(enc),done:false});

@@ -67,9 +67,9 @@ function accRefreshViews(){
 }
 
 /* ---------- sessão ---------- */
-async function accSetUser(user){
+async function accSetUser(user,first){
   const was=ACC.user&&ACC.user.id;ACC.user=user||null;
-  if(!user){ACC.nome='';accHeader();return}
+  if(!user){ACC.nome='';accHeader();if(was||first)show(location.hash.slice(1));return}
   if(was===user.id){accHeader();return}
   try{const p=await api(`perfis?id=eq.${user.id}&select=nome`);
     if(p&&p.length)ACC.nome=p[0].nome;
@@ -77,10 +77,13 @@ async function accSetUser(user){
       await api('perfis?on_conflict=id',{method:'POST',body:{id:user.id,nome:ACC.nome.slice(0,60)},prefer:'resolution=merge-duplicates,return=minimal'})}}
   catch(_){ACC.nome=user.email.split('@')[0]}
   accHeader();
+  if(ACC.pendingCode){const c=ACC.pendingCode;ACC.pendingCode=null;try{const t=await turmaJoin(c);toast(`Entrou na turma «${t.nome}».`)}catch(x){toast(x.message)}}
+  if(location.hash.startsWith('#turma-'))history.replaceState(null,'','#turmas');
+  show(location.hash.slice(1));
   try{const n=await accSync();if(n)toast(`Juntámos à sua conta ${n} resposta(s) feitas neste browser.`)}catch(_){}
-  if(location.hash.startsWith('#turma'))show(location.hash.slice(1));
 }
 function accHeader(){
+  document.body.classList.toggle('logado',!!ACC.user);
   const b=document.getElementById('accBtn');if(!b)return;
   if(ACC.user){const ini=(ACC.nome||'?').split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
     b.innerHTML=`<span class="av">${esc(ini)}</span><span class="acctx">${esc(ACC.nome)}</span>`;b.title='A sua conta'}
@@ -90,7 +93,7 @@ function accHeader(){
 function accStatus(msg){const el=document.getElementById('accSync');if(el)el.textContent=msg||(ACC.queue.length?'A enviar respostas…':'Progresso guardado na sua conta.')}
 
 /* ---------- janela de conta ---------- */
-function accModal(tab){
+function accModal(tab,withCode){
   let m=document.getElementById('accModal');
   if(!m){m=document.createElement('div');m.id='accModal';m.className='accm';document.body.appendChild(m);
     m.addEventListener('click',e=>{if(e.target===m)accClose()});document.addEventListener('keydown',e=>{if(e.key==='Escape')accClose()})}
@@ -110,15 +113,18 @@ function accModal(tab){
       <form id="accF" novalidate>
         ${tab==='up'?'<label class="fld">Nome<input name="nome" autocomplete="name" maxlength="60" required></label>':''}
         <label class="fld">Email<input name="email" type="email" autocomplete="email" required></label>
+        ${withCode||ACC.pendingCode?`<label class="fld">Código da turma<input name="code" maxlength="8" autocomplete="off" spellcheck="false" class="mono" value="${esc(ACC.pendingCode||'')}" placeholder="8 letras e números"><small>Fica a pertencer à turma assim que entrar.</small></label>`:''}
         <label class="fld">Palavra-passe<input name="pw" type="password" autocomplete="${tab==='in'?'current-password':'new-password'}" minlength="8" required>${tab==='up'?'<small>Pelo menos 8 caracteres.</small>':''}</label>
         <p class="ferr" id="accErr" role="alert"></p>
         <button class="btn pri" type="submit" id="accGo">${tab==='in'?'Entrar':'Criar conta'}</button>
       </form>
       <p class="small">${tab==='in'?'Ainda não tem conta? <button class="linkbtn" data-t="up">Criar conta</button>':'Já tem conta? <button class="linkbtn" data-t="in">Entrar</button>'}</p>
       ${tab==='up'?'<p class="small accnote">Guardamos o nome, o email e as respostas. O formador das turmas a que aderir vê o seu nome e o seu desempenho. Pode apagar o progresso a qualquer momento no painel de progresso.</p>':''}</div>`;
-    m.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>accModal(b.dataset.t));
+    m.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>accModal(b.dataset.t,withCode));
     $('accF').onsubmit=async e=>{e.preventDefault();const f=e.target,err=$('accErr'),go=$('accGo');err.textContent='';
-      const email=f.email.value.trim(),pw=f.pw.value,nome=f.nome?f.nome.value.trim():'';
+      const email=f.email.value.trim(),pw=f.pw.value,nome=f.nome?f.nome.value.trim():'',code=f.code?f.code.value.trim().toLowerCase():'';
+      if(code&&!/^[a-z0-9]{8}$/.test(code)){err.textContent='O código da turma tem 8 letras e números.';return}
+      if(code)ACC.pendingCode=code;
       if(tab==='up'&&!nome){err.textContent='Escreva o seu nome.';return}
       if(!/^\S+@\S+\.\S+$/.test(email)){err.textContent='Confirme o email.';return}
       if(pw.length<8){err.textContent='A palavra-passe precisa de pelo menos 8 caracteres.';return}
@@ -150,8 +156,8 @@ function turmaLink(c){return(CTG_CONFIG.siteUrl||location.origin+location.pathna
 async function showTurmas(code){
   const el=document.getElementById('tBody');if(!el)return;
   if(!ACC_ON){el.innerHTML='<div class="card notes"><p>As turmas só estão disponíveis no site com contas ativas.</p></div>';return}
-  if(!ACC.user){el.innerHTML=`<div class="card notes tintro"><h2>Turmas</h2><p>Para entrar numa turma ou criar uma, entre na sua conta.${code?` Depois de entrar, junta-se automaticamente à turma com o código <b class="mono">${esc(code)}</b>.`:''}</p><button class="btn pri" id="tLogin">Entrar ou criar conta</button></div>`;
-    $('tLogin').onclick=()=>accModal(code?'up':'in');return}
+  if(!ACC.user){if(code)ACC.pendingCode=code;el.innerHTML=`<div class="card notes tintro"><h2>Turmas</h2><p>Para entrar numa turma ou criar uma, entre na sua conta.${code?` Depois de entrar, junta-se automaticamente à turma com o código <b class="mono">${esc(code)}</b>.`:''}</p><button class="btn pri" id="tLogin">Entrar ou criar conta</button></div>`;
+    $('tLogin').onclick=()=>accModal(code?'up':'in',!!code);if(code&&ACC.ready)accModal('up',true);return}
   if(code){try{await turmaJoin(code);toast('Entrou na turma.')}catch(x){toast(x.message)}history.replaceState(null,'','#turmas')}
   el.innerHTML='<div class="card notes"><p class="small">A carregar as turmas…</p></div>';
   try{
@@ -222,13 +228,34 @@ async function turmaOpen(id){
   }catch(x){box.innerHTML=`<div class="card notes"><p>Não foi possível abrir o painel: ${esc(x.message)}</p></div>`}
 }
 
+/* ---------- acesso: simuladores e treino só com sessão iniciada ---------- */
+const ACC_PUBLIC=['inicio','sobre','turmas'];
+const GATE_TXT={sala:'a Sala de partos',treino:'o Treino rápido',reais:'os Traçados reais',demo:'a Demonstração',construtor:'o Construtor',referencia:'a Referência',resultados:'os Resultados',exame:'o exame em sala'};
+function accGate(v){
+  if(!ACC_ON||ACC_PUBLIC.includes(v)||ACC.user)return false;
+  document.body.dataset.view='gate';
+  document.querySelectorAll('main > .view').forEach(s=>s.classList.toggle('on',s.id==='v-gate'));
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+v));
+  if(typeof heroRun==='function')heroRun(false);
+  const g=$('gBody');
+  if(!ACC.ready){g.innerHTML='<div class="card gatebox"><p class="small">A verificar a sessão…</p></div>';return true}
+  g.innerHTML=`<div class="card gatebox">
+    <svg class="gico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
+    <h2>Entre para continuar</h2>
+    <p>Para abrir ${GATE_TXT[v]||'esta secção'} precisa de uma conta. É gratuita e guarda o seu progresso em qualquer dispositivo.</p>
+    <div class="gatecta"><button class="cta pri" data-acc="up">Criar conta</button><button class="cta" data-acc="in">Entrar</button></div>
+    <p class="small">Recebeu um código ou QR code do formador? <button class="linkbtn" data-acc="code">Criar conta com o código da turma</button></p></div>`;
+  return true;
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-acc]');if(!b||!ACC_ON)return;e.preventDefault();accModal(b.dataset.acc==='code'?'up':b.dataset.acc,b.dataset.acc==='code')});
+
 /* ---------- arranque ---------- */
 function accInit(){
   if(!ACC_ON)return;
   document.body.classList.add('contas');
   ACC.sb=window.supabase.createClient(CTG_CONFIG.supabaseUrl,CTG_CONFIG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'ctg-auth'}});
   $('accBtn').onclick=()=>accModal();
-  ACC.sb.auth.onAuthStateChange((ev,session)=>{setTimeout(()=>accSetUser(session?session.user:null),0)});
+  ACC.sb.auth.onAuthStateChange((ev,session)=>{setTimeout(()=>{const first=!ACC.ready;ACC.ready=true;accSetUser(session?session.user:null,first)},0)});
   accHeader();
   window.addEventListener('online',accFlush);
 }
