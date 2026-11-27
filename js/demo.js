@@ -187,6 +187,7 @@ function loop(ts){
     while(n-->0){S.eng.step();const e=S.eng,f=e.F[e.F.length-1];if(!e.p.maternal&&f<e.b-15)S.dec+=DT;else S.dec=0}
   }
   if(mon&&S.eng){drawMon();readouts()}
+  if(typeof sndHeart==='function'){const on=mon&&S.eng&&S.run&&!document.hidden;if(S.eng&&S.eng!==S._sndE){S._sndE=S.eng;sndClear('demo')}sndHeart('demo',S.eng?S.eng.F[S.eng.F.length-1]:0,on);if(S.eng&&mon)sndBar($('mAlarm'),sndAlarmUpdate('demo',S.eng,null,on),'demo')}
   if($('v-construtor').classList.contains('on')&&B.eng){if(B.run){B.acc+=dt*20;let n=Math.floor(B.acc/DT);B.acc-=n*DT;while(n-->0)B.eng.step()}drawCTG($('cvBuild'),B.eng,{tEnd:B.eng.t,win:20*MIN,tZero:0})}
   requestAnimationFrame(loop);
 }

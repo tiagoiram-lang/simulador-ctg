@@ -34,7 +34,7 @@ $('wPauseOpt').onchange=e=>W.pauseOnMsg=e.target.checked;
 
 function wStart(id){
   const cs=CASES.find(c=>c.id===id);W.cs=cs;W.back=0;W.feedN=-1;W.acc=0;
-  const sim=new LabourSim(cs,{mode:W.mode});W.sim=sim;
+  const sim=new LabourSim(cs,{mode:W.mode});W.sim=sim;sim._snd=true;sim.e._alog=[];if(typeof sndClear==='function')sndClear('sala');
   sim.onMsg=(it,o)=>{if(o.pause&&W.pauseOnMsg&&!sim.ended){W.run=false;showPause(it,o.review)}};
   sim.onEnd=()=>{W.run=false;setTimeout(showDebrief,700)};
   $('wPick').style.display='none';$('wDeb').style.display='none';$('wRun').style.display='';
@@ -113,9 +113,11 @@ function wLoop(ts){
   const dt=Math.min(.1,(ts-wLast)/1000||0);wLast=ts;
   const vis=$('v-sala').classList.contains('on')&&$('wRun').style.display!=='none';
   if(W.sim&&vis){
-    if(W.run&&!W.sim.ended&&!$('modal').classList.contains('on')){W.acc+=dt*W.speed;let n=Math.min(8000,Math.floor(W.acc/DT));W.acc-=n*DT;while(n-->0&&W.run&&!W.sim.ended)W.sim.step()}
+    const going=W.run&&!W.sim.ended&&!$('modal').classList.contains('on');
+    if(going){W.acc+=dt*W.speed;let n=Math.min(8000,Math.floor(W.acc/DT));W.acc-=n*DT;while(n-->0&&W.run&&!W.sim.ended)W.sim.step()}
     drawWard();uiState();
-  }
+    if(typeof sndHeart==='function'){const e=W.sim.e;sndHeart('sala',e.F[e.F.length-1],going&&!document.hidden);sndBar($('wAlarm'),sndAlarmUpdate('sala',e,null,going&&!document.hidden),'sala')}
+  }else if(typeof sndHeart==='function')sndHeart('sala',0,false);
   requestAnimationFrame(wLoop);
 }
 
@@ -165,6 +167,9 @@ function submitReview(){
 function reviewTable(fields){return`<table class="rres"><thead><tr><th>Parâmetro</th><th>A sua resposta</th><th>Simulador</th><th></th></tr></thead><tbody>${fields.map(f=>`<tr><td>${f.k}</td><td>${esc(f.a)}</td><td>${esc(f.tr)}</td><td>${f.ok?'<span class="ok">✓</span>':f.part>0?`<span class="pt">${Math.round(f.part*100)}%</span>`:'<span class="ko">✗</span>'}</td></tr>`).join('')}</tbody></table>`}
 
 /* ---------- relatório final ---------- */
+function alarmSummary(sim){const L=sim.e._alog||[];if(!L.length)return'<p class="small">O monitor não deu alarmes durante o caso.</p>';
+  const by={};L.forEach(a=>{by[a.lab]=(by[a.lab]||0)+1});
+  return`<p class="small"><b>Alarmes do monitor (${L.length}):</b> ${Object.entries(by).map(([k,v])=>`${esc(k)} ×${v}`).join(' · ')}. Primeiro alarme às ${sim.clock(L[0].t)}. Os alarmes avisam; não substituem a revisão estruturada do traçado.</p>`}
 function showDebrief(){
   const sim=W.sim,cs=sim.cs,o=sim.outcome,ev=evaluate(sim);
   $('modal').classList.remove('on');$('wRun').style.display='none';$('wPauseBar').classList.remove('on');
@@ -184,7 +189,7 @@ function showDebrief(){
    <div class="card dsec"><h3>Traçado completo</h3>
      <div class="legend"><span><i style="background:rgba(194,59,50,.18)"></i>Patológico (FIGO)</span><span><i style="background:rgba(194,122,18,.16)"></i>Suspeito</span><span><i style="background:#0098BC"></i>Ações numeradas</span>${cs.fet.mhrCapture?'<span><i style="background:#2E8B57"></i>FCF real (tracejado verde)</span>':''}<span><i style="background:#C23B32"></i>FC materna (quando registada)</span></div>
      <div class="longwrap"><canvas id="cvLong" style="height:400px"></canvas><canvas id="cvPH" style="height:130px"></canvas></div>
-     <p class="small">Faixa inferior: pH fetal estimado pelo modelo (não visível durante o caso). Linhas a 7,20, 7,10 e 7,00.</p></div>
+     <p class="small">Faixa inferior: pH fetal estimado pelo modelo (não visível durante o caso). Linhas a 7,20, 7,10 e 7,00.</p>${alarmSummary(sim)}</div>
    <div class="two">
      <div class="card dsec"><h3>Critérios clínicos</h3><div class="crit">${ev.crit.map(c=>`<div><span class="${c.ok?'ok':'ko'}">${c.ok?'✓':'✗'}</span><span><b>${esc(c.k)}</b><span class="d">${esc(c.d)}</span></span></div>`).join('')}</div></div>
      <div class="card dsec"><h3>Ações (${sim.acts.length})</h3><div class="crit">${sim.acts.length?sim.acts.map(a=>`<div><span class="${a.q==='good'?'ok':a.q==='bad'?'ko':''}">${a.q==='good'?'✓':a.q==='bad'?'✗':'·'}</span><span><b>${a.n}. ${a.clock} · ${esc(a.lab)}</b><span class="d">${esc(a.why||'')}</span></span></div>`).join(''):'<p class="small">Nenhuma ação registada.</p>'}</div></div>

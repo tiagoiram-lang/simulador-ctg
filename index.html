@@ -113,6 +113,7 @@
       <div class="seg" id="wSpeed"><button data-s="1">×1</button><button data-s="10">×10</button><button data-s="30" class="on">×30</button><button data-s="60">×60</button><button data-s="120">×120</button></div>
       <button class="btn" id="wPlay">Pausar</button>
       <button class="btn pri" id="wReview">Revisão do CTG</button>
+      <span data-sndslot></span>
       <button class="btn" id="wQuit">Terminar caso</button>
       <div class="wclock"><span id="wClock">--:--</span><small id="wElapsed"></small></div>
     </div>
@@ -132,6 +133,7 @@
             <div class="dig toco"><div class="k">TOCO</div><div class="v" id="dToco">--</div></div>
             <div class="dig sig"><div class="k">Sinal fetal</div><div class="v" id="dSig">Ultrassons</div></div>
           </div>
+          <div class="alarmbar" id="wAlarm" aria-live="assertive"></div>
           <div class="paper"><canvas class="wctg" id="cvW" aria-label="Traçado CTG em curso"></canvas></div>
           <div class="scrub"><span>Rever o papel</span><input type="range" id="wBack" min="0" max="0" value="0" step="1" aria-label="Recuar no papel"><span class="live" id="wBackTx">em tempo real</span><span>Janela</span><div class="seg" id="wWin"><button data-w="10">10</button><button data-w="20" class="on">20</button><button data-w="40">40 min</button></div></div>
         </div>
@@ -232,6 +234,7 @@
           <div data-m="15"><b>15 min</b>Nascimento</div>
         </div>
       </div>
+      <div class="alarmbar" id="mAlarm" aria-live="assertive"></div>
       <div class="card paperwrap">
         <canvas class="ctg" id="cvMon" aria-label="Traçado cardiotocográfico simulado"></canvas>
         <div class="endcard" id="endcard"><div><h2 id="endT"></h2><p id="endP"></p><button class="btn" id="endAna">Ver análise do caso</button> <button class="btn pri" id="endRe">Repetir o cenário</button></div></div>
@@ -243,6 +246,7 @@
         <div class="seg" id="speed"><button data-s="1">×1</button><button data-s="10">×10</button><button data-s="20" class="on">×20</button><button data-s="60">×60</button></div>
         <span class="small">Janela</span>
         <div class="seg" id="win"><button data-w="10">10 min</button><button data-w="20" class="on">20 min</button><button data-w="40">40 min</button></div>
+        <span data-sndslot></span>
         <span class="small" style="margin-left:auto">Papel a 1 cm/min · FCF 50–210 bpm · faixa 110–160 sombreada</span>
       </div>
     </div>
@@ -354,7 +358,7 @@
       <h2>Sobre esta plataforma</h2>
       <p>Plataforma de treino e autoavaliação em vigilância fetal intraparto, para estudo individual, ensino em grupo e avaliação de competências. Junta a classificação por padrões (FIGO 2015, ACOG 2025, NICE NG229), a interpretação fisiológica do CTG e traçados reais com desfecho neonatal conhecido.</p>
       <p><b>Estado da revisão clínica:</b> por validar. Os casos, os critérios de avaliação e os parâmetros do modelo devem ser revistos por profissionais de obstetrícia antes de qualquer uso formal de avaliação.</p>
-      <p class="small">Versão 8 · novembro de 2026. As doentes da Sala de partos e os traçados do Treino rápido são fictícios; 20 dos 31 casos seguem o padrão e o contexto clínico de um registo real da base CTU-UHB, indicado no relatório final. O separador «Traçados reais» usa registos reais anonimizados da base pública CTU-UHB (Brno, 2010–2012), com o respetivo desfecho neonatal.</p>
+      <p class="small">Versão 9 · novembro de 2026. As doentes da Sala de partos e os traçados do Treino rápido são fictícios; 20 dos 31 casos seguem o padrão e o contexto clínico de um registo real da base CTU-UHB, indicado no relatório final. O separador «Traçados reais» usa registos reais anonimizados da base pública CTU-UHB (Brno, 2010–2012), com o respetivo desfecho neonatal.</p>
     </div>
     <div class="card notes">
       <h3>Como funciona o simulador</h3>
@@ -364,6 +368,7 @@
         <li><b>Desfecho:</b> pH da artéria umbilical, défice de bases, lactato e Apgar são derivados do pH final por relações aproximadas.</li>
         <li><b>Caso em tempo real (traçados reais):</b> o registo avança e para aos 20 minutos e depois de 15 em 15; em cada paragem regista a classificação, a conduta e a confiança. No fim vê o desfecho real e a área de desacelerações dos 30 minutos anteriores a cada paragem, comparada com os 552 partos da base.</li>
         <li><b>Treino adaptativo e níveis:</b> cada resposta fica guardada neste browser. O sorteio mostra mais vezes os padrões em que falha e espaça os que já domina. Os quatro níveis usam as últimas 60 respostas (classificação, cada campo, traçados patológicos e calibração da confiança) e são critérios desta plataforma, não uma certificação.</li>
+        <li><b>Som do monitor:</b> na Sala de partos, no Turno e na Demonstração ouve-se o batimento fetal como num Doppler, à frequência que o monitor está a registar. Desaparece quando o sinal se perde. Há alarmes com padrões de prioridade inspirados na norma IEC 60601-1-8: FCF abaixo de 110 bpm durante 1 min, abaixo de 100 bpm durante 3 min, acima de 160 bpm durante 2 min e perda de sinal. Há ainda o telefone quando a equipa pede revisão, um aviso nas mensagens e o bip da bomba de ocitocina. Os alarmes podem ser silenciados e ficam registados no relatório final. O seletor de som tem três posições: sem som, só alarmes e chamadas, ou som completo.</li>
         <li><b>Casos a partir de registos reais:</b> 20 casos (7 básicos, 7 intermédios, 6 avançados) foram desenhados a partir de padrões encontrados nos 552 registos: sono fetal, desacelerações variáveis grandes com pH normal, efeito do sulfato de magnésio, febre, taquissistolia espontânea, linha de base que sobe lentamente, mecónio espesso, bradicardia final, expulsivo longo. Cada caso foi testado em simulação repetida: os casos normais terminam bem sem intervir, e os de hipoxia agravam sem atuação e melhoram com a atuação certa. O pH real do registo de origem serve de referência, não de alvo exato.</li>
         <li><b>Turno no bloco de partos:</b> três casos da Sala de partos correm ao mesmo tempo, sem pausa nas mensagens. Há interrupções (tratar ou delegar), revisões com olhos frescos, uma passagem de turno em formato SBAR e chamadas estruturadas ao sénior. O relatório junta a qualidade dos cuidados em cada sala com indicadores de fatores humanos: tempo até ver os alertas e minutos de traçado patológico numa sala que não era vigiada há mais de 15 min.</li>
         <li><b>Apoio computorizado (traçados reais):</b> estima o risco de acidemia a partir da área de desacelerações dos últimos 30 min, com as taxas observadas nos 552 partos (AUC 0,64), e mostra a linha de base, as desacelerações, a variabilidade de curto prazo e o sinal em falta. Por omissão aparece em metade dos casos, ao acaso, para cada pessoa comparar o seu desempenho com e sem apoio.</li>
@@ -458,5 +463,6 @@
 <script src="js/live.js"></script>
 <script src="js/home.js"></script>
 <script src="js/app.js"></script>
+<script src="js/som.js"></script>
 </body>
 </html>

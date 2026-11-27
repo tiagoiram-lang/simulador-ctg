@@ -22,7 +22,8 @@ function tuPick(){
 }
 function tuStart(){
   const cs=tuPick();
-  TU.rooms=cs.map((c,i)=>{const sim=new LabourSim(c,{mode:'avaliacao',seed:Math.floor(Math.random()*1e9)});const R0={i,cs:c,sim,alerts:[],lastFocus:0,unread:0};
+  if(typeof sndClear==='function')sndClear('turno');
+  TU.rooms=cs.map((c,i)=>{const sim=new LabourSim(c,{mode:'avaliacao',seed:Math.floor(Math.random()*1e9)});sim._snd=true;sim.e._alog=[];const R0={i,cs:c,sim,alerts:[],lastFocus:0,unread:0};
     sim.onMsg=(it,o)=>{if(TU.on&&(o.pause||it.kind==='call')&&!sim.ended){R0.alerts.push({tm:tuNow(),it,seen:TU.focus===i?tuNow():null});if(TU.focus!==i)R0.unread++;tuTicker(R0,it)}};
     sim.onEnd=()=>{TU.events.push({tm:tuNow(),r:i,t:'fim'});tuCheckEnd()};
     sim.clock=function(t){return tuClock(this.tmin(t))};sim.feed.forEach(it=>it.clock=tuClock(it.tm));
@@ -36,10 +37,11 @@ function tuRender(){
   $('tsRun').innerHTML=`<div class="card tsbar"><div><h2 style="margin:0">Turno no bloco de partos</h2><div class="small">Três salas ao mesmo tempo. O tempo não para com as mensagens: escolha onde olhar.</div></div>
     <div class="tsclock mono" id="tsClock">08:00</div>
     <div class="seg" id="tsSpeed"><button data-s="10">×10</button><button data-s="20" class="on">×20</button><button data-s="40">×40</button></div>
-    <button class="btn" id="tsPlay">Pausar</button><button class="btn" id="tsQuit">Terminar turno</button></div>
+    <span data-sndslot></span><button class="btn" id="tsPlay">Pausar</button><button class="btn" id="tsQuit">Terminar turno</button></div>
    <div class="tsticker" id="tsTicker" aria-live="polite"></div>
-   <div class="tsgrid"><div class="tsrooms" id="tsRooms">${TU.rooms.map(r=>`<button class="troom" data-r="${r.i}"><div class="trh"><b>Sala ${r.i+1}</b><span class="trb" id="trb${r.i}"></span></div><div class="trn">${esc(r.cs.nome)}</div><canvas class="trcv" id="trcv${r.i}"></canvas><div class="trs small" id="trs${r.i}"></div></button>`).join('')}</div>
+   <div class="tsgrid"><div class="tsrooms" id="tsRooms">${TU.rooms.map(r=>`<button class="troom" data-r="${r.i}"><div class="trh"><b>Sala ${r.i+1}</b><span class="tral" id="tral${r.i}"></span><span class="trb" id="trb${r.i}"></span></div><div class="trn">${esc(r.cs.nome)}</div><canvas class="trcv" id="trcv${r.i}"></canvas><div class="trs small" id="trs${r.i}"></div></button>`).join('')}</div>
     <div class="tsfocus"><div class="card panel"><div class="tfh"><h2 id="tfName" style="margin:0"></h2><span class="small" id="tfMeta"></span></div></div>
+      <div class="alarmbar" id="tfAlarm" aria-live="assertive"></div>
       <div class="card paperwrap"><canvas class="ctg" id="tfCv"></canvas></div>
       <div class="tfgrid"><div class="card panel"><h3>Ações</h3><div id="tfActs" class="tfacts"></div></div><div class="card panel"><h3>Mensagens da sala</h3><div id="tfFeed" class="tffeed"></div></div></div></div></div>
    <div class="tsbusy" id="tsBusy"></div>`;
@@ -76,7 +78,16 @@ function tuLoop(ts){
     while(n-->0&&!TU.ended){TU.t+=DT;for(const R0 of TU.rooms)if(!R0.sim.ended)R0.sim.step();
       if(TU.t-TU.minTick>=60){TU.minTick=TU.t;tuMinute()}}
   }
-  tuUI(false);TU.raf=requestAnimationFrame(tuLoop);
+  tuUI(false);tuSound();TU.raf=requestAnimationFrame(tuLoop);
+}
+/* som do turno: batimento só da sala em foco; alarmes de todas as salas, mesmo durante uma interrupção */
+function tuSound(){
+  if(typeof sndHeart!=='function')return;
+  const going=TU.run&&!TU.modal&&!TU.ended&&!document.hidden&&$('v-sala').classList.contains('on');
+  const F=TU.rooms[TU.focus];sndHeart('turno',F&&!F.sim.ended&&!TU.busy?F.sim.e.F[F.sim.e.F.length-1]:0,going);
+  for(const R0 of TU.rooms){const k='turno-'+R0.i,L=R0.sim.ended?[]:sndAlarmUpdate(k,R0.sim.e,R0.i,going);
+    const el=$('tral'+R0.i);if(el){const un=L.filter(a=>!a.ack);el.className='tral'+(L.length?' on p-'+(L.some(a=>a.prio==='alta')?'alta':L.some(a=>a.prio==='media')?'media':'baixa'):'')+(L.length&&!un.length?' ack':'');el.textContent=L.length?(un.length?'Alarme':'Silenciado'):''}
+    if(R0.i===TU.focus)sndBar($('tfAlarm'),L,k)}
 }
 /* uma vez por minuto de turno: vigilância não feita, interrupções e tarefas programadas */
 function tuMinute(){

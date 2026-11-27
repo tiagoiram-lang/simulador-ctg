@@ -336,3 +336,24 @@ body.aluno .pgcard{display:none}
 .pcard .ref{font-size:11.5px;color:var(--cyan)}
 .refbox{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .refbox p{max-width:70ch;margin:4px 0 0}
+
+/* alarmes do monitor */
+.alarmbar{display:none}
+.alarmbar.on{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;font-size:14px;font-weight:600;color:#fff;background:#B7791F}
+.alarmbar.p-alta{background:#B4302A}
+.alarmbar.p-baixa{background:#2F5D86}
+.alarmbar.ack{background:#3A4656;color:#D5DCE4;font-weight:500}
+.alarmbar .ad{width:9px;height:9px;border-radius:50%;background:#fff;flex:none;animation:alblink 1s steps(2,start) infinite}
+.alarmbar.ack .ad{animation:none;opacity:.5}
+.alarmbar .at{flex:1}
+.alarmbar .abtn{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:4px 10px;font:inherit;font-size:13px;cursor:pointer;transition:transform .12s ease-out}
+.alarmbar .abtn:active{transform:scale(.97)}
+.alarmbar .aack{font-size:12.5px;opacity:.8}
+.paperwrap + .alarmbar,.alarmbar + .card{margin-top:0}
+#mAlarm.on,#tfAlarm.on{margin-bottom:10px}
+@keyframes alblink{to{visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.alarmbar .ad{animation:none}}
+.tral{font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;display:none;margin-left:auto;margin-right:6px}
+.tral.on{display:inline-block;color:#fff;background:#B7791F}
+.tral.p-alta{background:#B4302A}.tral.p-baixa{background:#2F5D86}.tral.ack{background:#8A939E}
+.sndseg button{display:inline-flex;align-items:center;gap:5px}
