@@ -35,7 +35,7 @@ create index if not exists membros_user_idx on public.membros (user_id);
 create table if not exists public.registos (
   id       bigint generated always as identity primary key,
   user_id  uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  tipo     text not null check (tipo in ('treino','exame','caso','desafio')),
+  tipo     text not null check (tipo in ('treino','exame','caso','desafio','turno')),
   t        bigint not null,                       -- instante da resposta no dispositivo (ms)
   dados    jsonb not null check (pg_column_size(dados) < 4000),
   criado   timestamptz not null default now(),
@@ -125,3 +125,7 @@ create policy "registo: criar" on public.registos for insert to authenticated
   with check (user_id = (select auth.uid()));
 create policy "registo: apagar" on public.registos for delete to authenticated
   using (user_id = (select auth.uid()));
+
+-- 4. Atualização: tipo «turno» (turno com 3 salas) -------------------------
+alter table public.registos drop constraint if exists registos_tipo_check;
+alter table public.registos add constraint registos_tipo_check check (tipo in ('treino','exame','caso','desafio','turno'));

@@ -25,7 +25,7 @@ function rvNew(){
   const m=rvPick();if(!m)return;
   RV.seen=[m.id,...(RV.seen||[])].slice(0,40);RV.win=30;document.querySelectorAll('#rvWin button').forEach(b=>b.classList.toggle('on',b.dataset.w==='30'));
   const dur=Math.min(m.n,60*60),start=m.n-dur;
-  RV.case={m,start,dur,pts:rvPoints(dur),i:0,tc:20*60,ans:[],done:false,ready:false};
+  RV.case={m,start,dur,pts:rvPoints(dur),i:0,tc:20*60,ans:[],done:false,ready:false,aid:aidDraw()};$('rvAid').innerHTML='';
   $('rvTitle').textContent='Caso em tempo real';$('rvChips').innerHTML=ctxChips(m);
   $('rvSub').textContent='Vigie o traçado como se estivesse na sala. Em cada paragem classifique e decida; o desfecho só aparece no fim.';
   $('rvOut').innerHTML='';$('rvOut').classList.remove('on');
@@ -45,8 +45,10 @@ function rvDraw(){
   const p=C.done?'Caso terminado':`Paragem ${C.i+1} de ${C.pts.length} · ${Math.round(C.tc/60)} min de observação`;
   $('rvProg').textContent=p;
 }
+function rvAidShow(){const C=RV.case;if(!C||!C.ready)return;
+  $('rvAid').innerHTML=(C.aid||C.done)?`<div class="card panel">${cctgHTML(C.m,C.start+C.tc)}${C.done&&!C.aid?'<p class="small">Neste caso decidiu sem apoio; este é o painel que teria visto no fim.</p>':''}</div>`:(aidMode()==='meio'?'<div class="card panel aidoff"><p class="small">Neste caso decide sem apoio computorizado (sorteio do estudo humano + máquina).</p></div>':'')}
 function rvForm(){
-  const C=RV.case,G=D.guide;
+  const C=RV.case,G=D.guide;rvAidShow();
   $('rvForm').innerHTML=`<h3 style="margin:0">Paragem ${C.i+1}</h3><p class="small" style="margin:4px 0 0">${Math.round(C.tc/60)} min de observação. Classifique o que vê agora e decida.</p>
     <div class="gbar"><span class="small">Classificar segundo</span><div class="seg" id="rvGuide">${Object.entries(GUIDE).map(([k,l])=>`<button data-g="${k}" class="${k===G?'on':''}">${l}</button>`).join('')}</div></div>
     <div class="rf"><h4>Classificação do traçado</h4><div class="opts2" id="rvCls">${radios('rvCls',CLS_OPTS[G])}</div></div>
@@ -54,9 +56,10 @@ function rvForm(){
     <div class="rf"><h4>Confiança</h4><div class="opts2">${radios('rvConf',RV_CONF)}</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="rvGo">Registar e continuar</button><button class="btn" id="rvSkip">Outro caso</button></div>
     <div class="small" id="rvMsg" style="color:var(--bad)"></div>
+    <div style="margin-top:10px">${aidSelHTML('rvAidSel')}</div>
     ${C.ans.length?`<div class="rvlog">${C.ans.map((a,k)=>`<div><span class="mono">${Math.round(a.t/60)} min</span> ${esc(CLS_OPTS[a.g][a.cls])} · ${esc(RV_ACT[a.act])}</div>`).join('')}</div>`:''}`;
   $('rvGuide').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;D.guide=b.dataset.g;store('ctg-guide',D.guide);document.querySelectorAll('#rvGuide button').forEach(x=>x.classList.toggle('on',x===b));$('rvCls').innerHTML=radios('rvCls',CLS_OPTS[D.guide])};
-  $('rvGo').onclick=rvSubmit;$('rvSkip').onclick=rvNew;
+  $('rvGo').onclick=rvSubmit;$('rvSkip').onclick=rvNew;aidBind('rvAidSel');
 }
 function rvSubmit(){
   const C=RV.case;if(!C||C.done||!C.ready)return;
@@ -94,9 +97,9 @@ function rvVerdict(C){
 function rvEnd(){
   const C=RV.case;C.done=true;cancelAnimationFrame(RV.anim);
   const m=C.m,v=rvVerdict(C);
-  const st=store('ctg-real-live')||[];st.push({id:m.id,pH:m.pH,del:v.del?v.del.t:null,dur:C.dur,n:C.ans.length,d:Date.now()});store('ctg-real-live',st.slice(-300));if(typeof accPush==='function')accPush('caso',st[st.length-1]);
+  const st=store('ctg-real-live')||[];st.push({id:m.id,pH:m.pH,del:v.del?v.del.t:null,dur:C.dur,n:C.ans.length,aj:!!C.aid,d:Date.now()});store('ctg-real-live',st.slice(-300));if(typeof accPush==='function')accPush('caso',st[st.length-1]);
   /* revela o resto do registo até ao nascimento */
-  C.tc=C.dur;RV.win=0;document.querySelectorAll('#rvWin button').forEach(b=>b.classList.toggle('on',b.dataset.w==='0'));rvDraw();
+  C.tc=C.dur;RV.win=0;rvAidShow();document.querySelectorAll('#rvWin button').forEach(b=>b.classList.toggle('on',b.dataset.w==='0'));rvDraw();
   $('rvForm').innerHTML=`<h3 style="margin:0">Caso terminado</h3><p class="small">O registo foi revelado até ao nascimento. As suas decisões estão marcadas no traçado (D1, D2…).</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="rvNext">Próximo caso</button><button class="btn" id="rvLib">Ver na biblioteca</button></div>`;
   $('rvNext').onclick=rvNew;$('rvLib').onclick=()=>{setRealMode('lib');openReal(m.id)};
@@ -123,6 +126,7 @@ function rvStats(){
     <div><div class="k">Antecedência mediana</div><div class="v">${med!=null?med+' min':'—'}</div><div class="s">entre a sua decisão e o nascimento real, nos casos com acidemia</div></div>
     <div><div class="k">Partos sem benefício fetal</div><div class="v">${pct(okD.length,ok.length)}</div><div class="s">decidiu o parto com pH ≥ 7,20 (${okD.length} de ${ok.length})</div></div>
     <div><div class="k">Acidemias graves sem decisão</div><div class="v">${sev}</div><div class="s">pH &lt; 7,05 sem decisão de parto</div></div></div>
+    ${aidCompare(s,'caso')}
     <p class="small">Cerca de 45% dos casos sorteados têm acidemia, para haver casos que ensinam; só entram registos com sinal legível. <button class="linkbtn" id="rvReset">Apagar estatísticas</button></p>`;
   $('rvReset').onclick=ev=>{const b=ev.target;if(b.dataset.c){store('ctg-real-live',[]);if(typeof accDelete==='function')accDelete(['caso']);rvStats()}else{b.dataset.c=1;b.textContent='Confirmar: apagar'}};
 }

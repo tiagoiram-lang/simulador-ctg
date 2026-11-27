@@ -215,3 +215,4 @@ button.cta{font-family:inherit;cursor:pointer}
 .gatebox p{color:#4F5A69;line-height:1.55}
 .gico{width:40px;height:40px;padding:8px;border-radius:12px;background:var(--accent-soft);fill:none;stroke:var(--cyan);stroke-width:1.6;stroke-linecap:round}
 .gatecta{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 14px}
+@media (max-width:1560px) and (min-width:1101px){header.top nav a{padding:0 8px;font-size:13.5px}header.top nav a::after{left:8px;right:8px}}

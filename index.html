@@ -100,10 +100,12 @@
         <label class="row"><input type="checkbox" id="wPauseOpt" checked> Pausar quando a equipa chama</label>
       </div>
     </div>
+    <div class="card shiftcard"><div><span class="mn mono">Novo</span><h2>Turno no bloco de partos</h2><p>Três salas ao mesmo tempo, durante duas horas e meia de turno. As mensagens não param o tempo, há interrupções, uma passagem de turno em formato SBAR e revisões com olhos frescos. No fim vê como cuidou de cada sala e onde a atenção falhou.</p></div><button class="cta pri" id="tsGo" type="button">Começar turno</button></div>
     <div class="cases" id="wCases"></div>
   </div>
 
   <!-- caso em curso -->
+  <div id="tsRun" class="tsrun" style="display:none"></div>
   <div id="wRun" style="display:none">
     <div class="card wtop">
       <div class="who"><h2 id="wName"></h2><div id="wMeta"></div></div>
@@ -171,6 +173,7 @@
         <div class="stage">
           <div class="card panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h2 id="rvTitle" style="margin:0"></h2><div class="seg" id="rvWin"><button data-w="30" class="on">30 min</button><button data-w="0">Desde o início</button></div></div><div class="small" id="rvSub"></div><div class="cchips" id="rvChips"></div><div class="rvprog mono" id="rvProg"></div></div>
           <div class="card qtrace"><canvas class="static" id="cvRealL" aria-label="Traçado real a decorrer"></canvas></div>
+          <div id="rvAid"></div>
           <div class="card expl" id="rvOut"></div>
           <div class="card notes" id="rvStats"></div>
         </div>
@@ -182,6 +185,7 @@
         <div class="stage">
           <div class="card panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h2 id="rcTitle" style="margin:0"></h2><div class="seg" id="rcWin"><button data-w="30" class="on">30 min</button><button data-w="60">60 min</button></div></div><div class="small" id="rcSub"></div><div class="cchips" id="rcChips"></div></div>
           <div class="card qtrace"><canvas class="static" id="cvRealC" aria-label="Traçado real do desafio"></canvas></div>
+          <div id="rcAid"></div>
           <div class="card expl" id="rcOut"></div>
           <div class="card notes" id="rcStats"></div>
         </div>
@@ -359,6 +363,8 @@
         <li><b>Desfecho:</b> pH da artéria umbilical, défice de bases, lactato e Apgar são derivados do pH final por relações aproximadas.</li>
         <li><b>Caso em tempo real (traçados reais):</b> o registo avança e para aos 20 minutos e depois de 15 em 15; em cada paragem regista a classificação, a conduta e a confiança. No fim vê o desfecho real e a área de desacelerações dos 30 minutos anteriores a cada paragem, comparada com os 552 partos da base.</li>
         <li><b>Treino adaptativo e níveis:</b> cada resposta fica guardada neste browser. O sorteio mostra mais vezes os padrões em que falha e espaça os que já domina. Os quatro níveis usam as últimas 60 respostas (classificação, cada campo, traçados patológicos e calibração da confiança) e são critérios desta plataforma, não uma certificação.</li>
+        <li><b>Turno no bloco de partos:</b> três casos da Sala de partos correm ao mesmo tempo, sem pausa nas mensagens. Há interrupções (tratar ou delegar), revisões com olhos frescos, uma passagem de turno em formato SBAR e chamadas estruturadas ao sénior. O relatório junta a qualidade dos cuidados em cada sala com indicadores de fatores humanos: tempo até ver os alertas e minutos de traçado patológico numa sala que não era vigiada há mais de 15 min.</li>
+        <li><b>Apoio computorizado (traçados reais):</b> estima o risco de acidemia a partir da área de desacelerações dos últimos 30 min, com as taxas observadas nos 552 partos (AUC 0,64), e mostra a linha de base, as desacelerações, a variabilidade de curto prazo e o sinal em falta. Por omissão aparece em metade dos casos, ao acaso, para cada pessoa comparar o seu desempenho com e sem apoio.</li>
         <li><b>Verdade clínica:</b> a classificação «correta» é calculada a partir do que foi gerado (desacelerações registadas, contrações, durações), aplicando as regras de cada diretriz tal como estão escritas.</li>
       </ul>
     </div>
@@ -440,8 +446,10 @@
 <script src="js/demo.js"></script>
 <script src="js/drill.js"></script>
 <script src="js/real.js"></script>
+<script src="js/cctg.js"></script>
 <script src="js/reallive.js"></script>
 <script src="js/progress.js"></script>
+<script src="js/turno.js"></script>
 <script src="js/conta.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="js/live.js"></script>

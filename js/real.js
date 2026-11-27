@@ -114,7 +114,7 @@ function chPick(){
 }
 function newChallenge(){
   const m=chPick();
-  R.seen=[m.id,...R.seen].slice(0,40);R.ch={m,done:false};
+  R.seen=[m.id,...R.seen].slice(0,40);R.ch={m,done:false,aid:aidDraw()};$('rcAid').innerHTML='';
   const G=D.guide;
   $('rcTitle').textContent='Desafio · adivinhe o desfecho';$('rcChips').innerHTML=ctxChips(m);
   $('rcSub').textContent=`Últimos ${R.chWin} min antes do parto. O registo termina ${m.s2b?`${m.s2b|0} min`:'menos de 1 min'} antes do nascimento.`;
@@ -131,7 +131,8 @@ function newChallenge(){
   if(!m.b64)cvWait($('cvRealC'),'A carregar o traçado…');
   realSig(m).then(()=>{if(tok===R.tok&&R.ch&&R.ch.m===m)drawChallenge()}).catch(()=>{if(R.ch&&R.ch.m===m)cvWait($('cvRealC'),'Não foi possível carregar este traçado. Carregue em «Outro traçado».')});
 }
-function drawChallenge(){if(!R.ch||!R.ch.m.b64)return;const e=realEng(R.ch.m);drawCTG($('cvRealC'),e,{tEnd:e.t,win:R.chWin*60,tZero:e.t,marks:true,labEvery:R.chWin>=60?600:300})}
+function chAidShow(){const c=R.ch;if(!c||!c.m.b64)return;$('rcAid').innerHTML=(c.aid||c.done)?`<div class="card panel">${cctgHTML(c.m,c.m.n)}</div>`:(aidMode()==='meio'?'<div class="card panel aidoff"><p class="small">Neste traçado decide sem apoio computorizado (sorteio do estudo humano + máquina).</p></div>':'')}
+function drawChallenge(){if(!R.ch||!R.ch.m.b64)return;chAidShow();const e=realEng(R.ch.m);drawCTG($('cvRealC'),e,{tEnd:e.t,win:R.chWin*60,tZero:e.t,marks:true,labEvery:R.chWin>=60?600:300})}
 function submitChallenge(){
   const g=n=>{const x=document.querySelector(`input[name=${n}]:checked`);return x?x.value:null};
   const a={cls:g('rcCls'),ac:g('rcAc'),conf:g('rcConf'),dec:g('rcDec')};
@@ -139,7 +140,7 @@ function submitChallenge(){
   const m=R.ch.m;if(!m.b64){$('rcMsg').textContent='Espere que o traçado termine de carregar.';return}R.ch.done=true;$('rcMsg').textContent='';
   document.querySelectorAll('#rcForm input').forEach(i=>i.disabled=true);
   const acid=m.pH<7.15,right=(a.ac==='1')===acid;
-  const st=chStats();st.push({id:m.id,guide:D.guide,cls:a.cls,ac:+a.ac,conf:+a.conf,dec:a.dec,pH:m.pH,d:Date.now()});store('ctg-real',st.slice(-500));if(typeof accPush==='function')accPush('desafio',st[st.length-1]);
+  const st=chStats();st.push({id:m.id,guide:D.guide,cls:a.cls,ac:+a.ac,conf:+a.conf,dec:a.dec,pH:m.pH,aj:!!R.ch.aid,d:Date.now()});store('ctg-real',st.slice(-500));if(typeof accPush==='function')accPush('desafio',st[st.length-1]);
   let dmsg='';
   if(a.dec==='acelerar'&&m.pH>=7.2)dmsg='À luz do desfecho, acelerar o parto teria sido uma intervenção sem benefício fetal (falso alarme). É o principal custo da baixa especificidade do CTG.';
   else if(a.dec==='vigiar'&&m.pH<7.05)dmsg='O recém-nascido nasceu com acidemia grave e a sua opção foi manter vigilância. Reveja o traçado à procura dos sinais de descompensação.';
@@ -149,7 +150,7 @@ function submitChallenge(){
   $('rcOut').innerHTML=`<div class="esum ${right?'okt':'kot'}"><b>${right?'Acertou':'Não acertou'}</b> na estimativa de acidemia. ${esc(dmsg)}</div>${outcomeHTML(m)}
     <p class="small">Classificou como <b>${CLS_OPTS[D.guide][a.cls]}</b> (${GUIDE[D.guide]}). Nos traçados reais não há uma classificação «certa» calculada pelo simulador: o que ensina é o desfecho. Veja abaixo como as suas classificações se relacionam com o pH.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="rcNext">Próximo traçado</button><button class="btn" id="rcLib">Ver o registo completo na biblioteca</button></div>`;
-  $('rcOut').classList.add('on');
+  $('rcOut').classList.add('on');chAidShow();
   $('rcNext').onclick=newChallenge;$('rcLib').onclick=()=>{setRealMode('lib');openReal(m.id)};
   renderChStats();$('rcOut').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
@@ -170,7 +171,9 @@ function renderChStats(){
    </div>
    <h4 class="eg">A sua classificação e o pH real</h4>
    <table class="hist"><thead><tr><th>Diretriz</th><th>Classificação</th><th>Traçados</th><th>Com acidemia (&lt; 7,15)</th><th>Acidemia grave (&lt; 7,05)</th></tr></thead><tbody>${Object.values(byCls).sort((a,b)=>a.g.localeCompare(b.g)).map(r=>`<tr><td>${GUIDE[r.g]}</td><td>${CLS_OPTS[r.g][r.c]}</td><td class="n">${r.n}</td><td class="n">${r.ac} (${pct(r.ac,r.n)})</td><td class="n">${r.sev} (${pct(r.sev,r.n)})</td></tr>`).join('')}</tbody></table>
+   ${aidCompare(s,'desafio')}<div style="margin:8px 0">${aidSelHTML('rcAidSel')}</div>
    <p class="small">Neste desafio cerca de 4 em cada 10 traçados têm acidemia, para haver casos suficientes. Na base completa (${R.data.length} partos) a proporção é de 19% com pH &lt; 7,15 e 7% com pH &lt; 7,05. <button class="linkbtn" id="rcReset">Apagar estatísticas</button></p>`;
+  aidBind('rcAidSel');
   $('rcReset').onclick=e=>{const b=e.target;if(b.dataset.c){store('ctg-real',[]);if(typeof accDelete==='function')accDelete(['desafio']);renderChStats()}else{b.dataset.c=1;b.textContent='Confirmar: apagar'}};
 }
 

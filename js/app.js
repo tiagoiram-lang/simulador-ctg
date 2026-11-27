@@ -242,5 +242,5 @@ function show(h){
 }
 window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
 window.addEventListener('resize',()=>{if($('v-reais').classList.contains('on')&&realInit)(R.mode==='lib'?drawReal():R.mode==='live'?rvDraw():drawChallenge());if($('v-treino').classList.contains('on'))drawDrill();if($('v-referencia').classList.contains('on'))initMinis()});
-renderPick();initMonitor();initBuild();if(typeof accInit==='function')accInit();show(location.hash.slice(1));
+renderPick();initMonitor();initBuild();$('tsGo').onclick=()=>tuStart();if(typeof accInit==='function')accInit();show(location.hash.slice(1));
 requestAnimationFrame(loop);requestAnimationFrame(wLoop);
