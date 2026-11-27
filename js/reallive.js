@@ -94,7 +94,7 @@ function rvVerdict(C){
 function rvEnd(){
   const C=RV.case;C.done=true;cancelAnimationFrame(RV.anim);
   const m=C.m,v=rvVerdict(C);
-  const st=store('ctg-real-live')||[];st.push({id:m.id,pH:m.pH,del:v.del?v.del.t:null,dur:C.dur,n:C.ans.length,d:Date.now()});store('ctg-real-live',st.slice(-300));
+  const st=store('ctg-real-live')||[];st.push({id:m.id,pH:m.pH,del:v.del?v.del.t:null,dur:C.dur,n:C.ans.length,d:Date.now()});store('ctg-real-live',st.slice(-300));if(typeof accPush==='function')accPush('caso',st[st.length-1]);
   /* revela o resto do registo até ao nascimento */
   C.tc=C.dur;RV.win=0;document.querySelectorAll('#rvWin button').forEach(b=>b.classList.toggle('on',b.dataset.w==='0'));rvDraw();
   $('rvForm').innerHTML=`<h3 style="margin:0">Caso terminado</h3><p class="small">O registo foi revelado até ao nascimento. As suas decisões estão marcadas no traçado (D1, D2…).</p>
@@ -124,7 +124,7 @@ function rvStats(){
     <div><div class="k">Partos sem benefício fetal</div><div class="v">${pct(okD.length,ok.length)}</div><div class="s">decidiu o parto com pH ≥ 7,20 (${okD.length} de ${ok.length})</div></div>
     <div><div class="k">Acidemias graves sem decisão</div><div class="v">${sev}</div><div class="s">pH &lt; 7,05 sem decisão de parto</div></div></div>
     <p class="small">Cerca de 45% dos casos sorteados têm acidemia, para haver casos que ensinam; só entram registos com sinal legível. <button class="linkbtn" id="rvReset">Apagar estatísticas</button></p>`;
-  $('rvReset').onclick=ev=>{const b=ev.target;if(b.dataset.c){store('ctg-real-live',[]);rvStats()}else{b.dataset.c=1;b.textContent='Confirmar: apagar'}};
+  $('rvReset').onclick=ev=>{const b=ev.target;if(b.dataset.c){store('ctg-real-live',[]);if(typeof accDelete==='function')accDelete(['caso']);rvStats()}else{b.dataset.c=1;b.textContent='Confirmar: apagar'}};
 }
 function rvInit(){
   $('rvWin').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;RV.win=+b.dataset.w;document.querySelectorAll('#rvWin button').forEach(x=>x.classList.toggle('on',x===b));rvDraw()};

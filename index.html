@@ -31,8 +31,10 @@
     <a href="#construtor" data-v="construtor">Construtor</a>
     <a href="#referencia" data-v="referencia">Referência</a>
     <a href="#resultados" data-v="resultados">Resultados</a>
+    <a href="#turmas" data-v="turmas" id="turmasLink" class="ctas">Turmas</a>
     <a href="#sobre" data-v="sobre">Sobre</a>
   </nav>
+  <button class="accbtn ctas" id="accBtn" type="button"></button>
   <button class="fsbtn" id="fsBtn" type="button" aria-pressed="false" title="Mostrar a plataforma em ecrã inteiro">
     <svg class="ic-on" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>
     <svg class="ic-off" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/></svg>
@@ -329,6 +331,9 @@
   </div>
 </section>
 
+<!-- ============ TURMAS ============ -->
+<section class="view" id="v-turmas"><div class="twrap" id="tBody"></div></section>
+
 <!-- ============ SOBRE ============ -->
 <section class="view" id="v-sobre">
   <div class="ref" style="max-width:980px">
@@ -419,6 +424,7 @@
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mbox"><header><h2 id="mTitle"></h2><button class="btn" id="mClose" aria-label="Fechar">Fechar</button></header><div class="mb" id="mBody"></div><div class="mf" id="mFoot"></div></div></div>
 
 <footer>Ferramenta de ensino com doentes e traçados simulados; o modelo fisiológico é simplificado. Não substitui o julgamento clínico nem os protocolos da instituição.</footer>
+<script src="js/vendor/supabase-2.119.2.js"></script>
 <script src="js/config.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/cases.js"></script>
@@ -428,6 +434,7 @@
 <script src="js/real.js"></script>
 <script src="js/reallive.js"></script>
 <script src="js/progress.js"></script>
+<script src="js/conta.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="js/live.js"></script>
 <script src="js/home.js"></script>

@@ -9,7 +9,9 @@ Plataforma de formação em cardiotocografia: casos clínicos que evoluem com as
 - `index.html`: página única com todas as secções
 - `css/`: estilos (`brand.css` tem a identidade visual)
 - `js/`: motor do traçado (`engine.js`), casos (`cases.js`), treino e exame (`drill.js`), traçados reais (`real.js`), exame em sala (`live.js`), página de entrada (`home.js`)
-- `js/config.js`: ligação à Supabase para o exame em sala (chave publicável; nunca a secreta)
+- `js/config.js`: ligação à Supabase (chave publicável; nunca a secreta)
+- `js/conta.js`: contas, sincronização do progresso e turmas; `js/vendor/`: supabase-js 2.119.2 (licença MIT)
+- `supabase/schema.sql` e `supabase/contas.sql`: tabelas e regras de acesso (RLS) da base de dados
 - `data/ctu-index.json`: lista e metadados dos 552 partos; `data/ctu-N.json`: o sinal, em blocos carregados a pedido
 
 O site é estático: qualquer alteração enviada para o ramo `main` fica publicada pelo GitHub Pages em 1 a 2 minutos.

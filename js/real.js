@@ -139,7 +139,7 @@ function submitChallenge(){
   const m=R.ch.m;if(!m.b64){$('rcMsg').textContent='Espere que o traçado termine de carregar.';return}R.ch.done=true;$('rcMsg').textContent='';
   document.querySelectorAll('#rcForm input').forEach(i=>i.disabled=true);
   const acid=m.pH<7.15,right=(a.ac==='1')===acid;
-  const st=chStats();st.push({id:m.id,guide:D.guide,cls:a.cls,ac:+a.ac,conf:+a.conf,dec:a.dec,pH:m.pH,d:Date.now()});store('ctg-real',st.slice(-500));
+  const st=chStats();st.push({id:m.id,guide:D.guide,cls:a.cls,ac:+a.ac,conf:+a.conf,dec:a.dec,pH:m.pH,d:Date.now()});store('ctg-real',st.slice(-500));if(typeof accPush==='function')accPush('desafio',st[st.length-1]);
   let dmsg='';
   if(a.dec==='acelerar'&&m.pH>=7.2)dmsg='À luz do desfecho, acelerar o parto teria sido uma intervenção sem benefício fetal (falso alarme). É o principal custo da baixa especificidade do CTG.';
   else if(a.dec==='vigiar'&&m.pH<7.05)dmsg='O recém-nascido nasceu com acidemia grave e a sua opção foi manter vigilância. Reveja o traçado à procura dos sinais de descompensação.';
@@ -171,7 +171,7 @@ function renderChStats(){
    <h4 class="eg">A sua classificação e o pH real</h4>
    <table class="hist"><thead><tr><th>Diretriz</th><th>Classificação</th><th>Traçados</th><th>Com acidemia (&lt; 7,15)</th><th>Acidemia grave (&lt; 7,05)</th></tr></thead><tbody>${Object.values(byCls).sort((a,b)=>a.g.localeCompare(b.g)).map(r=>`<tr><td>${GUIDE[r.g]}</td><td>${CLS_OPTS[r.g][r.c]}</td><td class="n">${r.n}</td><td class="n">${r.ac} (${pct(r.ac,r.n)})</td><td class="n">${r.sev} (${pct(r.sev,r.n)})</td></tr>`).join('')}</tbody></table>
    <p class="small">Neste desafio cerca de 4 em cada 10 traçados têm acidemia, para haver casos suficientes. Na base completa (${R.data.length} partos) a proporção é de 19% com pH &lt; 7,15 e 7% com pH &lt; 7,05. <button class="linkbtn" id="rcReset">Apagar estatísticas</button></p>`;
-  $('rcReset').onclick=e=>{const b=e.target;if(b.dataset.c){store('ctg-real',[]);renderChStats()}else{b.dataset.c=1;b.textContent='Confirmar: apagar'}};
+  $('rcReset').onclick=e=>{const b=e.target;if(b.dataset.c){store('ctg-real',[]);if(typeof accDelete==='function')accDelete(['desafio']);renderChStats()}else{b.dataset.c=1;b.textContent='Confirmar: apagar'}};
 }
 
 /* ---------- arranque do separador ---------- */

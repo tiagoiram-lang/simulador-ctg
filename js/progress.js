@@ -5,7 +5,7 @@ const PROG_N=60;   // as percentagens usam as últimas 60 respostas
 
 function progAll(){return store('ctg-prog')||[]}
 function progAdaptive(){const v=store('ctg-adapt');return v==null?true:!!v}
-function progRecord(x){const h=progAll();h.push({...x,t:Date.now()});store('ctg-prog',h.slice(-1500))}
+function progRecord(x){const h=progAll();const e={...x,t:Date.now()};h.push(e);store('ctg-prog',h.slice(-1500));if(typeof accPush==='function')accPush(e.x?'exame':'treino',e)}
 const progSevere=k=>k==='P'||k==='III';
 
 /* desempenho por padrão (receita): proporção de campos certos, com mais peso para a classificação */
@@ -38,8 +38,8 @@ const LEVELS=[
   {n:2,nm:'Em desenvolvimento',d:'Classifica corretamente a maioria dos traçados; ainda falha padrões menos frequentes.'},
   {n:3,nm:'Prática autónoma',d:'Classificação consistente, incluindo traçados patológicos, em todos os campos.'},
   {n:4,nm:'Referência',d:'Classificação quase sempre certa e confiança bem calibrada: pode apoiar a revisão de outros.'}];
-function progStats(){
-  const all=progAll(),h=all.slice(-PROG_N),N=all.length;
+function progStats(list){
+  const all=list||progAll(),h=all.slice(-PROG_N),N=all.length;
   const f={};PF.forEach(k=>f[k]=h.length?h.filter(x=>x.res[k]).length/h.length:0);
   const sev=h.filter(x=>progSevere(x.k)),sevAcc=sev.length?sev.filter(x=>x.res.figo).length/sev.length:null;
   const conf={};[1,2,3].forEach(c=>{const z=h.filter(x=>+x.c===c);conf[c]={n:z.length,acc:z.length?z.filter(x=>x.res.figo).length/z.length:null}});
@@ -53,8 +53,8 @@ function progStats(){
   const next=lvl<4?req[lvl].filter(r=>!r[0]).map(r=>r[1]):[];
   return{N,n:h.length,f,sevAcc,sevN:sev.length,conf,lvl,next};
 }
-function progWeak(){
-  const by=progByRecipe(progAll());
+function progWeak(list){
+  const by=progByRecipe(list||progAll());
   return Object.entries(by).filter(([,s])=>s.n>=1&&s.acc<0.8).sort((a,b)=>a[1].acc-b[1].acc).slice(0,5)
     .map(([id,s])=>({id,s,r:RECIPES.find(x=>x.id===id)})).filter(x=>x.r);
 }
@@ -78,5 +78,5 @@ function renderProg(){
    <p class="small pgfoot">Níveis definidos por esta plataforma a partir de critérios de desempenho; não são uma certificação. O sorteio adaptativo mostra mais vezes os padrões em que falha e espaça os que já domina. <button class="linkbtn" id="pgReset">Apagar progresso</button></p>`;
   $('pgAdapt').onchange=e=>store('ctg-adapt',e.target.checked);
   el.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{D.force=b.dataset.r;newDrill();$('dTitle').scrollIntoView({behavior:'smooth',block:'start'})});
-  $('pgReset').onclick=e=>{const b=e.target;if(b.dataset.c){store('ctg-prog',[]);renderProg()}else{b.dataset.c=1;b.textContent='Confirmar: apagar o progresso'}};
+  $('pgReset').onclick=e=>{const b=e.target;if(b.dataset.c){store('ctg-prog',[]);if(typeof accDelete==='function')accDelete(['treino','exame']);renderProg()}else{b.dataset.c=1;b.textContent='Confirmar: apagar o progresso'}};
 }

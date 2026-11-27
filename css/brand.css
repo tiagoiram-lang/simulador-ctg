@@ -154,3 +154,51 @@ body[data-view="inicio"] footer{display:none}
 body.aluno header.top nav,body.aluno .fsbtn,body.aluno .brand .wm small{display:none}
 body.aluno header.top{height:52px;padding-top:0;flex-wrap:nowrap}
 body.aluno .brand{pointer-events:none}
+
+/* ---------- contas e turmas ---------- */
+.ctas{display:none!important}
+body.contas .ctas{display:flex!important}
+.accbtn{align-items:center;gap:8px;margin-left:8px;height:34px;padding:0 10px 0 6px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:13px;font-weight:550;white-space:nowrap;transition:border-color .15s ease,transform .16s var(--ease-out)}
+.accbtn:hover{border-color:#B9C2CD}.accbtn:active{transform:scale(.97)}
+.accbtn svg{width:22px;height:22px;padding:3px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round}
+.accbtn .av{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:10.5px;font-weight:650;letter-spacing:.02em}
+.fsbtn{margin-left:auto}
+.accm{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(14,23,36,.45);opacity:0;pointer-events:none;transition:opacity .2s ease}
+.accm.on{opacity:1;pointer-events:auto}
+.accbox{position:relative;width:min(420px,100%);background:#fff;border-radius:16px;padding:24px;box-shadow:0 30px 60px -20px rgba(14,23,36,.45);transform:scale(.97) translateY(6px);transition:transform .22s var(--ease-out)}
+.accm.on .accbox{transform:none}
+.accbox h2{font-size:20px;margin:0 0 4px;letter-spacing:-.02em;color:var(--ink-950)}
+.accx{position:absolute;top:10px;right:12px;border:0;background:none;font-size:22px;line-height:1;color:var(--muted);padding:4px 8px;border-radius:8px}
+.accx:hover{background:#F0F2F5}
+.fld{display:flex;flex-direction:column;gap:6px;margin:12px 0 0;font-size:13px;font-weight:550;color:var(--ink)}
+.fld input{height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-weight:400;color:var(--ink);background:#fff}
+.fld input:focus{outline:2px solid var(--cyan);outline-offset:0;border-color:transparent}
+.fld small{font-weight:400;color:var(--muted)}
+#accF .btn.pri{width:100%;height:42px;margin-top:6px;font-size:15px}
+.ferr{min-height:1.2em;margin:8px 0 0;color:var(--bad);font-size:13px}
+.accrow{display:flex;gap:8px;margin-top:14px}.accrow .btn{text-decoration:none;display:inline-flex;align-items:center}
+.accnote{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+#toast{position:fixed;left:50%;bottom:22px;z-index:70;transform:translate(-50%,12px);opacity:0;pointer-events:none;background:var(--ink-950);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;box-shadow:0 12px 30px -12px rgba(14,23,36,.5);transition:opacity .2s ease,transform .2s var(--ease-out)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.twrap{max-width:1320px;margin:0 auto}
+.tintro{max-width:620px}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.tjoin{display:flex;gap:8px;margin-top:8px}.tjoin input{flex:1;height:38px;padding:0 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;min-width:0}
+#tCode{font-family:var(--f-mono);letter-spacing:.08em}
+.tli{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;color:var(--ink);font-size:14px}
+.tli small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.tbtn .go{color:var(--cyan);font-size:13px;font-weight:550}
+.tbtn:hover b{color:var(--cyan)}
+.tdh{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-bottom:14px}
+.tdact{display:flex;gap:6px;flex-wrap:wrap}
+.tdtop{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) minmax(0,1fr);gap:22px;margin-bottom:16px}
+.tqr svg{width:150px;height:150px;display:block}
+.tqr .lnk{word-break:break-all;font-size:11.5px}
+.tscroll{overflow-x:auto}
+.ttab td,.ttab th{white-space:nowrap}
+.lvchip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:#EEF1F4;color:#4F5A69}
+.lvchip.l2{background:#FBF1E0;color:#8A5A0E}.lvchip.l3{background:var(--accent-soft);color:#0A5F6A}.lvchip.l4{background:#E6F4EC;color:#1F6B42}
+.tdash .fbar{grid-template-columns:150px minmax(0,1fr) 50px}
+@media (max-width:900px){.tgrid,.tdtop{grid-template-columns:1fr}}
+@media (max-width:640px){.accbtn .acctx{display:none}.accbtn{padding:0 6px}}
+body.aluno .accbtn{display:none!important}

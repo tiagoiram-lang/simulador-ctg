@@ -230,16 +230,17 @@ $('fsBtn').onclick=async()=>{
 document.addEventListener('fullscreenchange',fsSync);
 
 /* ===================== NAVEGAÇÃO ===================== */
-const ROUTES={inicio:'inicio',sala:'sala',treino:'treino',demo:'monitor',construtor:'construtor',referencia:'referencia',resultados:'resultados',sobre:'sobre',reais:'reais'};
+const ROUTES={turmas:'turmas',inicio:'inicio',sala:'sala',treino:'treino',demo:'monitor',construtor:'construtor',referencia:'referencia',resultados:'resultados',sobre:'sobre',reais:'reais'};
 function show(h){
   if(h&&h.startsWith('exame-')&&liveParticipant(h))return;
+  const tcode=h&&/^turma-[a-z0-9]{8}$/.test(h)?h.slice(6):null;if(tcode)h='turmas';
   const v=ROUTES[h]?h:'inicio',id=ROUTES[v];document.body.dataset.view=v;
   document.querySelectorAll('main > .view').forEach(s=>s.classList.toggle('on',s.id==='v-'+id));
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+v));
-  heroRun(v==='inicio');if(v==='referencia')initMinis();if(v==='construtor')figoEval(readB());if(v==='resultados')renderHist();if(v==='reais')showReal();
+  heroRun(v==='inicio');if(v==='referencia')initMinis();if(v==='construtor')figoEval(readB());if(v==='resultados')renderHist();if(v==='reais')showReal();if(v==='turmas'&&typeof showTurmas==='function')showTurmas(tcode);
   if(v==='treino'){if(!D.cur&&!D.exam)newDrill();else drawDrill()}
 }
 window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
 window.addEventListener('resize',()=>{if($('v-reais').classList.contains('on')&&realInit)(R.mode==='lib'?drawReal():R.mode==='live'?rvDraw():drawChallenge());if($('v-treino').classList.contains('on'))drawDrill();if($('v-referencia').classList.contains('on'))initMinis()});
-renderPick();initMonitor();initBuild();show(location.hash.slice(1));
+renderPick();initMonitor();initBuild();if(typeof accInit==='function')accInit();show(location.hash.slice(1));
 requestAnimationFrame(loop);requestAnimationFrame(wLoop);
