@@ -164,7 +164,7 @@ function drawCTG(cv,eng,o){
     c.font='600 10.5px "Geist Mono",monospace';c.textAlign='center';c.textBaseline='middle';
     for(const m of eng.marks){if(m.t<t0||m.t>tEnd)continue;const x=Math.round(X(m.t))+.5;
       c.strokeStyle='rgba(0,152,188,.75)';c.setLineDash([3,3]);c.beginPath();c.moveTo(x,y0);c.lineTo(x,y1+th);c.stroke();c.setLineDash([]);
-      const w=Math.max(16,c.measureText(String(m.n)).width+8);c.fillStyle='#0098BC';c.fillRect(x-w/2,y0-22,w,15);c.fillStyle='#fff';c.fillText(m.n,x,y0-14.5)}
+      const w=Math.max(16,c.measureText(String(m.n)).width+8);c.fillStyle=m.col||'#0098BC';c.fillRect(x-w/2,y0-22,w,15);c.fillStyle='#fff';c.fillText(m.n,x,y0-14.5)}
   }
   if(o.annot)drawAnnot(c,eng,o.annot,{X,Yf,Yt,y0,y1,fh,th,L,pw,t0,tEnd});
   c.restore();

@@ -24,7 +24,7 @@ function realEng(m){
   if(m._e)return m._e;
   const raw=atob(m.b64),n=m.n,F=new Array(2*n),T=new Array(2*n);
   for(let k=0;k<n;k++){const f=raw.charCodeAt(k),u=raw.charCodeAt(n+k);const fv=f===0?NaN:f,uv=u===255?NaN:u;F[2*k]=F[2*k+1]=fv;T[2*k]=T[2*k+1]=uv}
-  const e={F,T,M:new Array(2*n).fill(NaN),TF:F,p:{showMhr:false},t:n,marks:m.ii?[{t:m.ii,n:'Início do expulsivo'}]:[]};
+  const e={F,T,M:new Array(2*n).fill(NaN),TF:F,p:{showMhr:false},t:n,marks:m.ii?[{t:m.ii,n:'Expulsivo'}]:[]};
   m._e=e;return e;
 }
 function phBand(p){return p<7.05?'lt705':p<7.15?'b715':p<7.2?'b720':'ge720'}
@@ -175,14 +175,15 @@ function renderChStats(){
 }
 
 /* ---------- arranque do separador ---------- */
-function setRealMode(m){R.mode=m;document.querySelectorAll('#rMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('rLib').style.display=m==='lib'?'':'none';$('rCh').style.display=m==='ch'?'':'none';
+function setRealMode(m){R.mode=m;document.querySelectorAll('#rMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('rLib').style.display=m==='lib'?'':'none';$('rCh').style.display=m==='ch'?'':'none';$('rLive').style.display=m==='live'?'':'none';
+  if(m==='live'){if(!RV.case)rvNew();else rvDraw();return}
   if(m==='ch'&&!R.ch)newChallenge();else if(m==='ch')drawChallenge();else drawReal()}
 let realInit=false;
 function showReal(){
-  if(realInit){R.mode==='lib'?drawReal():drawChallenge();return}
+  if(realInit){R.mode==='lib'?drawReal():R.mode==='live'?rvDraw():drawChallenge();return}
   $('rLoad').style.display='';$('rLoad').textContent='A carregar a lista dos 552 traçados reais…';
   realLoad().then(()=>{realInit=true;$('rLoad').style.display='none';$('rBody').style.display='';initRealLib();
-    $('rMode').onclick=e=>{const b=e.target.closest('button');if(b)setRealMode(b.dataset.m)};
+    $('rMode').onclick=e=>{const b=e.target.closest('button');if(b)setRealMode(b.dataset.m)};rvInit();if(R.mode!=='lib')setRealMode(R.mode);
     $('rcWin').onclick=e=>{const b=e.target.closest('button');if(!b)return;R.chWin=+b.dataset.w;document.querySelectorAll('#rcWin button').forEach(x=>x.classList.toggle('on',x===b));$('rcSub').textContent=$('rcSub').textContent.replace(/Últimos \d+ min/,`Últimos ${R.chWin} min`);drawChallenge()};
   }).catch(()=>{$('rLoad').textContent='Não foi possível carregar os traçados reais. Recarregue a página.'});
 }

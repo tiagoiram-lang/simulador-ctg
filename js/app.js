@@ -240,6 +240,6 @@ function show(h){
   if(v==='treino'){if(!D.cur&&!D.exam)newDrill();else drawDrill()}
 }
 window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
-window.addEventListener('resize',()=>{if($('v-reais').classList.contains('on')&&realInit)(R.mode==='lib'?drawReal():drawChallenge());if($('v-treino').classList.contains('on'))drawDrill();if($('v-referencia').classList.contains('on'))initMinis()});
+window.addEventListener('resize',()=>{if($('v-reais').classList.contains('on')&&realInit)(R.mode==='lib'?drawReal():R.mode==='live'?rvDraw():drawChallenge());if($('v-treino').classList.contains('on'))drawDrill();if($('v-referencia').classList.contains('on'))initMinis()});
 renderPick();initMonitor();initBuild();show(location.hash.slice(1));
 requestAnimationFrame(loop);requestAnimationFrame(wLoop);

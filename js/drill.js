@@ -147,6 +147,8 @@ function genTrace(rec,seed){
   return{e,g,rec,truth:drillTruth(e,g)};
 }
 function pickRecipe(){
+  if(D.force){const r=RECIPES.find(x=>x.id===D.force);D.force=null;if(r)return r}
+  if(typeof progPick==='function'&&progAdaptive())return progPick();
   const pool=RECIPES.filter(r=>!D.last.includes(r.id));const tot=pool.reduce((s,r)=>s+r.w,0);let x=Math.random()*tot;
   for(const r of pool){x-=r.w;if(x<=0)return r}return pool[0];
 }
@@ -193,10 +195,10 @@ function newDrill(){
   D.cur=genTrace(rec);D.done=false;D.ans=null;
   $('dTitle').textContent=`Traçado ${D.n+1}`;$('dCtx').textContent=D.cur.g.ctx+` Padrão semelhante há ${D.cur.g.pdur} min.`;
   $('dExpl').classList.remove('on');$('dExpl').innerHTML='';$('dLayers').style.display='none';
-  $('dForm').innerHTML=guideBar()+formHTML()+`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="xCheck">Corrigir</button><button class="btn" id="xNext">Novo traçado</button></div><div class="small" id="xMsg" style="color:var(--bad)"></div>`;
+  $('dForm').innerHTML=guideBar()+formHTML()+`<div class="rf" data-f="conf"><h4>Confiança na classificação <span class="small">(opcional)</span></h4><div class="opts2">${radios('xConf',{1:'Baixa',2:'Média',3:'Alta'})}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="xCheck">Corrigir</button><button class="btn" id="xNext">Novo traçado</button></div><div class="small" id="xMsg" style="color:var(--bad)"></div>`;
   bindGuide(()=>{if(!D.done)$('dForm').querySelector('.rf[data-f=figo]').outerHTML=formHTML().match(/<div class="rf" data-f="figo">[\s\S]*?<\/div><\/div>/)[0]});
   $('xCheck').onclick=checkDrill;$('xNext').onclick=newDrill;
-  drawDrill();
+  drawDrill();if(typeof renderProg==='function')renderProg();
 }
 function bindGuide(after){$('xGuide').onclick=e=>{const b=e.target.closest('button');if(!b||D.done)return;D.guide=b.dataset.g;store('ctg-guide',D.guide);document.querySelectorAll('#xGuide button').forEach(x=>x.classList.toggle('on',x===b));after&&after()}}
 function annotFor(cur){
@@ -210,6 +212,8 @@ function drawDrill(){if(!D.cur)return;const e=D.cur.e;drawCTG($('cvD'),e,{tEnd:e
 function checkDrill(){
   if(D.done)return;const a=readForm();if(!a){$('xMsg').textContent='Responda a todos os campos.';return}
   const {res,ok}=evalAns(D.cur,a,D.guide);markForm(D.cur,a,res,D.guide);
+  const cf=document.querySelector('input[name=xConf]:checked');document.querySelectorAll('input[name=xConf]').forEach(i=>i.disabled=true);
+  if(typeof progRecord==='function'){progRecord({r:D.cur.rec.id,g:D.guide,k:D.cur.truth.cls[D.guide],c:cf?+cf.value:null,res});renderProg()}
   D.done=true;D.n++;D.tot+=7;D.ok+=ok;D.streak=res.figo?D.streak+1:0;
   $('dN').textContent=D.n;$('dPct').textContent=Math.round(D.ok/D.tot*100)+'%';$('dStreak').textContent=D.streak;$('xMsg').textContent='';
   renderExpl(D.cur,a,res,D.guide);$('dLayers').style.display='';syncLayers();drawDrill();
@@ -275,7 +279,7 @@ function examItems(set){
   for(let i=ids.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]]}
   return ids.slice(0,EXAM_N).map((id,i)=>({id,seed:EXAM_SETS[set]*100+i}));
 }
-function setDrillMode(m){D.mode=m;document.querySelectorAll('#dMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('dStatsLivre').style.display=m==='livre'?'':'none';if(m==='livre'){D.exam=null;newDrill()}else renderExamHome()}
+function setDrillMode(m){D.mode=m;document.querySelectorAll('#dMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));$('dStatsLivre').style.display=m==='livre'?'':'none';if($('dProg'))$('dProg').style.display=m==='livre'?'':'none';if(m==='livre'){D.exam=null;newDrill()}else renderExamHome()}
 function renderExamHome(){
   if(typeof LV!=='undefined'&&LV.role==='aluno'){$('dForm').innerHTML='<p>Exame terminado. Pode fechar esta página.</p>';return}
   D.cur=null;D.done=false;const {c,W,H}=fitCanvas($('cvD'));c.fillStyle='#FFF8F4';c.fillRect(0,0,W,H);c.fillStyle='#7A5A50';c.font='15px "Geist",sans-serif';c.textAlign='center';c.fillText('O traçado aparece quando iniciar o exame.',W/2,H/2);
@@ -312,6 +316,7 @@ function examEnd(){
   const per=Object.fromEntries(fields.map(f=>[f,X.evals.filter(v=>v.res[f]).length]));
   const tot=X.evals.reduce((s,v)=>s+v.ok,0),pct=Math.round(tot/(X.items.length*7)*100),clsPct=Math.round(per.figo/X.items.length*100);
   if(D.onEnd)D.onEnd(X);
+  if(typeof progRecord==='function'&&!X.live)X.curs.forEach((c,i)=>progRecord({r:c.rec.id,g:X.guide,k:c.truth.cls[X.guide],c:null,res:X.evals[i].res,x:1}));
   const h=store('ctg-exam')||[];h.push({d:new Date().toISOString(),set:X.set,guide:X.guide,pct,cls:clsPct,secs:X.secs});store('ctg-exam',h.slice(-100));
   $('dTitle').textContent=`Resultado do exame · Conjunto ${X.set}`;$('dCtx').textContent=`${GUIDE[X.guide]} · ${X.items.length} traçados · tempo ${fmt(X.secs)}`;
   $('dForm').innerHTML=`<h3 style="margin:0">Resultado</h3><div class="score" style="margin:0;text-align:left"><div class="n">${pct}%</div><div class="l">${tot} de ${X.items.length*7} campos corretos · classificação certa em ${per.figo}/${X.items.length}</div></div>

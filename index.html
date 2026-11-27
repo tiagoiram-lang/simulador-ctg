@@ -142,7 +142,7 @@
 <section class="view" id="v-reais">
   <div class="card qhead" style="margin-bottom:12px">
     <div><h2 style="margin:0">Traçados reais anonimizados</h2><div class="small">Os 552 partos da base CTU-UHB (Hospital Universitário de Brno), com o desfecho neonatal real. Sinal reduzido a 1 amostra por segundo; cada traçado descarrega-se quando o abre.</div></div>
-    <div class="seg" id="rMode"><button data-m="lib" class="on">Biblioteca</button><button data-m="ch">Desafio: adivinhe o desfecho</button></div>
+    <div class="seg" id="rMode"><button data-m="lib" class="on">Biblioteca</button><button data-m="live">Caso em tempo real</button><button data-m="ch">Desafio: adivinhe o desfecho</button></div>
   </div>
   <div class="card notes" id="rLoad" style="display:none"></div>
   <div id="rBody" style="display:none">
@@ -157,6 +157,17 @@
         <div class="card paperwrap"><canvas class="ctg" id="cvReal" aria-label="Traçado real"></canvas>
           <div class="scrub light"><span>Recuar no registo</span><input type="range" id="rlPos" min="0" max="0" value="0"><span class="mono" id="rlPosTx"></span><span>Janela</span><div class="seg" id="rlWin"><button data-w="10">10</button><button data-w="20" class="on">20</button><button data-w="40">40</button><button data-w="90">90 min</button></div><button class="btn sm" id="rlAuto" title="Linha de base e desacelerações detetadas automaticamente">Análise automática</button></div><div class="small" id="rlAutoTx" style="display:none;padding:6px 4px 0">Análise automática: tracejado azul = linha de base estimada (mediana móvel de 10 min); zonas laranja = desacelerações detetadas (descida ≥15 bpm durante ≥15 s), com a profundidade em bpm. É uma medição por algoritmo, sujeita a erros sobretudo com perdas de sinal.</div></div>
         <div class="card panel" id="rlOut"></div>
+      </div>
+    </div>
+    <div id="rLive" style="display:none">
+      <div class="drill">
+        <div class="stage">
+          <div class="card panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h2 id="rvTitle" style="margin:0"></h2><div class="seg" id="rvWin"><button data-w="30" class="on">30 min</button><button data-w="0">Desde o início</button></div></div><div class="small" id="rvSub"></div><div class="cchips" id="rvChips"></div><div class="rvprog mono" id="rvProg"></div></div>
+          <div class="card qtrace"><canvas class="static" id="cvRealL" aria-label="Traçado real a decorrer"></canvas></div>
+          <div class="card expl" id="rvOut"></div>
+          <div class="card notes" id="rvStats"></div>
+        </div>
+        <div class="card dform" id="rvForm"></div>
       </div>
     </div>
     <div id="rCh" style="display:none">
@@ -181,6 +192,7 @@
       <div class="card qhead"><div><h2 id="dTitle">Treino rápido</h2><div class="small" id="dCtx"></div></div><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div class="seg" id="dMode"><button data-m="livre" class="on">Treino livre</button><button data-m="exame">Exame</button></div><div class="dstats" id="dStatsLivre"><span>Traçados <b id="dN">0</b></span><span>Acertos <b id="dPct">—</b></span><span>Sequência <b id="dStreak">0</b></span></div></div></div>
       <div class="card qtrace"><div class="layers" id="dLayers" style="display:none"><span class="small">Anotações no traçado:</span><button data-l="base">Linha de base</button><button data-l="var">Variabilidade</button><button data-l="acc">Acelerações</button><button data-l="dec">Desacelerações</button><button data-l="cont">Contrações</button><button data-all="1">Mostrar tudo</button></div><canvas class="static" id="cvD" aria-label="Traçado para classificar"></canvas></div>
       <div class="expl card" id="dExpl"></div>
+      <div class="card notes pgcard" id="dProg"></div>
     </div>
     <div class="card dform" id="dForm"></div>
   </div>
@@ -324,7 +336,7 @@
       <h2>Sobre esta plataforma</h2>
       <p>Plataforma de treino e autoavaliação em vigilância fetal intraparto, para estudo individual, ensino em grupo e avaliação de competências. Junta a classificação por padrões (FIGO 2015, ACOG 2025, NICE NG229), a interpretação fisiológica do CTG e traçados reais com desfecho neonatal conhecido.</p>
       <p><b>Estado da revisão clínica:</b> por validar. Os casos, os critérios de avaliação e os parâmetros do modelo devem ser revistos por profissionais de obstetrícia antes de qualquer uso formal de avaliação.</p>
-      <p class="small">Versão 6 · novembro de 2026. As doentes da Sala de partos e os traçados do Treino rápido são fictícios. O separador «Traçados reais» usa registos reais anonimizados da base pública CTU-UHB (Brno, 2010–2012), com o respetivo desfecho neonatal.</p>
+      <p class="small">Versão 7 · novembro de 2026. As doentes da Sala de partos e os traçados do Treino rápido são fictícios. O separador «Traçados reais» usa registos reais anonimizados da base pública CTU-UHB (Brno, 2010–2012), com o respetivo desfecho neonatal.</p>
     </div>
     <div class="card notes">
       <h3>Como funciona o simulador</h3>
@@ -332,6 +344,8 @@
         <li><b>Traçado:</b> a FCF é gerada a partir de uma linha de base, de variabilidade (soma de oscilações entre 0,8 e 20 ciclos por minuto, com o espectro calibrado nos 552 partos da base CTU-UHB), de acelerações e de desacelerações ligadas às contrações. O toco inclui tónus, contrações e puxos.</li>
         <li><b>Fisiologia (Sala de partos):</b> um pH fetal estimado desce durante as desacelerações (cerca de 0,01 por minuto numa desaceleração profunda), durante contrações num feto com pouca reserva, e recupera entre contrações. O traçado reage ao pH: perda de acelerações abaixo de 7,25, subida da linha de base abaixo de 7,22, redução da variabilidade abaixo de 7,12 e bradicardia terminal abaixo de 7,00.</li>
         <li><b>Desfecho:</b> pH da artéria umbilical, défice de bases, lactato e Apgar são derivados do pH final por relações aproximadas.</li>
+        <li><b>Caso em tempo real (traçados reais):</b> o registo avança e para aos 20 minutos e depois de 15 em 15; em cada paragem regista a classificação, a conduta e a confiança. No fim vê o desfecho real e a área de desacelerações dos 30 minutos anteriores a cada paragem, comparada com os 552 partos da base.</li>
+        <li><b>Treino adaptativo e níveis:</b> cada resposta fica guardada neste browser. O sorteio mostra mais vezes os padrões em que falha e espaça os que já domina. Os quatro níveis usam as últimas 60 respostas (classificação, cada campo, traçados patológicos e calibração da confiança) e são critérios desta plataforma, não uma certificação.</li>
         <li><b>Verdade clínica:</b> a classificação «correta» é calculada a partir do que foi gerado (desacelerações registadas, contrações, durações), aplicando as regras de cada diretriz tal como estão escritas.</li>
       </ul>
     </div>
@@ -412,6 +426,8 @@
 <script src="js/demo.js"></script>
 <script src="js/drill.js"></script>
 <script src="js/real.js"></script>
+<script src="js/reallive.js"></script>
+<script src="js/progress.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="js/live.js"></script>
 <script src="js/home.js"></script>
