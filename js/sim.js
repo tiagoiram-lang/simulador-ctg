@@ -7,13 +7,14 @@ const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[
 class LabourSim{
   constructor(cs,opts={}){
     /* cópia própria dos parâmetros: os eventos de um caso podem mudá-los sem afetar a próxima simulação */
+    this.src=cs;this.seed=opts.seed||(cs.id.length*977+13);
     cs={...cs,fet:{...cs.fet},start:{...cs.start},mat:{...cs.mat}};
     this.cs=cs;this.mode=opts.mode||'formacao';const f=cs.fet,s0=cs.start;
     this.st={dil:s0.dil,station:s0.station,pos:s0.pos,membr:s0.membr,liquido:s0.liquido,analgesia:s0.analgesia,oxy:s0.oxy,posicao:'semi',
       pushing:false,fullAt:s0.dil>=10?0:null,pushAcc:0,pushStart:null,tas:cs.mat.tas,tad:cs.mat.tad,fcm:cs.mat.fc,temp:cs.mat.temp,spo2:cs.mat.spo2,
       pH:f.pH0,opioidUntil:-1e9,tocoUntil:-1e9,terbUntil:-1e9,paraUntil:-1e9,abx:false,oxi:false,scalp:false,hypo:false,oxyStopAt:null,fluids:0,vitals:null};
     this.e=new Engine({baseline:f.base,varAmp:f.var,accelPerHour:f.accel,cycling:!f.chronic&&!f.sinus,cInt:f.spont>0?600/f.spont:0,cDur:75,cAmp:40,tone:10,
-      mhrBase:cs.mat.fc,ramp:2,varRamp:2,toneRamp:20,sinus:f.sinus||0,sinusCpm:4},opts.seed||(cs.id.length*977+13));
+      mhrBase:cs.mat.fc,ramp:2,varRamp:2,toneRamp:20,sinus:f.sinus||0,sinusCpm:4},this.seed);
     this.e.decelHook=c=>this.decel(c);
     this.flags={};this.feed=[];this.acts=[];this.reviews=[];this.hist=[];this.acute=null;this.acuteHist=[];this.decision=null;this.ended=false;this.outcome=null;
     this.per10=f.spont;this.terminal=false;this.lastUpd=-1e9;this.lastSnap=-1e9;this.evi=0;this.lastProto=0;this.lastVit=0;this.nPush=0;

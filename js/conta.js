@@ -23,6 +23,7 @@ function accLocal(){
   (store('ctg-real-live')||[]).forEach(x=>out.push({tipo:'caso',t:x.d,dados:x}));
   (store('ctg-real')||[]).forEach(x=>out.push({tipo:'desafio',t:x.d,dados:x}));
   (store('ctg-turno')||[]).forEach(x=>out.push({tipo:'turno',t:x.d,dados:x}));
+  (store('ctg-hist')||[]).forEach(x=>{if(x.t)out.push({tipo:'caso',t:x.t,dados:x})});
   return out.filter(x=>x.t);
 }
 function accPush(tipo,dados){
@@ -50,9 +51,10 @@ async function accSync(){
   const up=local.filter(x=>!have.has(key(x)));
   if(up.length){ACC.queue.push(...up);await accFlush()}
   const merged={};[...remote,...local].forEach(x=>{merged[key(x)]=x});
-  const by={prog:[],live:[],real:[],turno:[]};
-  Object.values(merged).sort((a,b)=>a.t-b.t).forEach(x=>{if(x.tipo==='treino'||x.tipo==='exame')by.prog.push(x.dados);else if(x.tipo==='caso')by.live.push(x.dados);else if(x.tipo==='turno')by.turno.push(x.dados);else by.real.push(x.dados)});
+  const by={prog:[],live:[],real:[],turno:[],sala:[]};
+  Object.values(merged).sort((a,b)=>a.t-b.t).forEach(x=>{if(x.tipo==='treino'||x.tipo==='exame')by.prog.push(x.dados);else if(x.tipo==='caso')(x.dados&&x.dados.k==='sala'?by.sala:by.live).push(x.dados);else if(x.tipo==='turno')by.turno.push(x.dados);else by.real.push(x.dados)});
   store('ctg-prog',by.prog.slice(-1500));store('ctg-real-live',by.live.slice(-300));store('ctg-real',by.real.slice(-500));store('ctg-turno',by.turno.slice(-100));
+  const oldH=(store('ctg-hist')||[]).filter(x=>!x.t);store('ctg-hist',oldH.concat(by.sala).slice(-200));
   accRefreshViews();
   return up.length;
 }
@@ -202,8 +204,9 @@ async function turmaOpen(id){
     const [ps,rs]=ids.length?await Promise.all([api(`perfis?id=in.(${ids.join(',')})&select=id,nome`),accPull(ids)]):[[],[]];
     const nome=Object.fromEntries(ps.map(p=>[p.id,p.nome]));
     const rows=ids.map(u=>{const mine=rs.filter(r=>r.user_id===u);const prog=mine.filter(r=>r.tipo==='treino'||r.tipo==='exame').map(r=>r.dados);
-      const S=progStats(prog),C=caseStats(mine.filter(r=>r.tipo==='caso').map(r=>r.dados)),T=mine.filter(r=>r.tipo==='turno').map(r=>r.dados);const last=mine.length?Math.max(...mine.map(r=>r.t)):null;
-      return{u,nome:nome[u]||'(sem nome)',S,C,T,last,prog}});
+      const S=progStats(prog),C=caseStats(mine.filter(r=>r.tipo==='caso'&&!(r.dados&&r.dados.k==='sala')).map(r=>r.dados)),SL=mine.filter(r=>r.tipo==='caso'&&r.dados&&r.dados.k==='sala').map(r=>r.dados),EP=errProfile(SL,prog.filter(x=>!x.x)),T=mine.filter(r=>r.tipo==='turno').map(r=>r.dados);const last=mine.length?Math.max(...mine.map(r=>r.t)):null;
+      return{u,nome:nome[u]||'(sem nome)',S,C,T,last,prog,SL,EP}});
+    const EPall=errProfile(rows.flatMap(r=>r.SL.slice(-15)),rows.flatMap(r=>r.prog.filter(x=>!x.x).slice(-PROG_N)));
     const pooled=rows.flatMap(r=>r.prog.slice(-PROG_N)),P=progStats(pooled),weak=progWeak(pooled);
     const lvCount=[1,2,3,4].map(l=>rows.filter(r=>r.S.lvl===l).length);
     const fmtD=t=>t?new Date(t).toLocaleDateString('pt-PT',{day:'2-digit',month:'short'}):'—';
@@ -214,12 +217,12 @@ async function turmaOpen(id){
       <div class="tdtop"><div class="tqr">${qrSVG(turmaLink(t.codigo),5)}<p class="small">Os formandos leem o QR code, criam conta e entram na turma.<br><span class="mono lnk">${esc(turmaLink(t.codigo))}</span></p></div>
         <div><h4 class="eg" style="margin-top:0">Turma (últimas ${PROG_N} respostas de cada formando)</h4>${pooled.length?PF.map(k=>`<div class="fbar"><span>${PF_L[k]}</span><div class="tr"><div style="width:${Math.round(P.f[k]*100)}%;background:${P.f[k]>=.8?'var(--ok)':P.f[k]>=.6?'var(--warn)':'var(--bad)'}"></div></div><span class="mono">${pc(P.f[k])}</span></div>`).join(''):'<p class="small">Ainda sem respostas.</p>'}
           <p class="small">Níveis: ${lvCount.map((c,i)=>`${c} no ${i+1}`).join(' · ')}</p></div>
-        <div><h4 class="eg" style="margin-top:0">Padrões mais falhados pela turma</h4>${weak.length?weak.map(w=>`<div class="pgw"><span>${esc(w.r.nm)}<small>${w.s.n}× · ${Math.round(w.s.acc*100)}%</small></span></div>`).join(''):'<p class="small">—</p>'}</div></div>
-      ${rows.length?`<div class="tscroll"><table class="hist ttab"><thead><tr><th>Formando</th><th>Nível</th><th>Traçados</th><th>Classificação</th><th>Desacelerações</th><th>Patológicos</th><th>Casos reais</th><th>Acidemias com decisão</th><th>Turnos</th><th>Última atividade</th><th></th></tr></thead><tbody>
-        ${rows.sort((a,b)=>(b.last||0)-(a.last||0)).map(r=>`<tr><td><b>${esc(r.nome)}</b></td><td><span class="lvchip l${r.S.lvl}">${r.S.lvl} · ${LEVELS[r.S.lvl-1].nm}</span></td><td class="n">${r.S.N}</td><td class="n">${r.S.n?pc(r.S.f.figo):'—'}</td><td class="n">${r.S.n?pc(r.S.f.dec):'—'}</td><td class="n">${pc(r.S.sevAcc)}</td><td class="n">${r.C.n}</td><td class="n">${r.C.ac?`${r.C.acD}/${r.C.ac}`:'—'}</td><td class="n">${r.T.length?`${r.T.length} · média ${Math.round(r.T.reduce((s,x)=>s+x.score,0)/r.T.length)}`:'—'}</td><td>${fmtD(r.last)}</td><td><button class="linkbtn" data-rm="${r.u}">Remover</button></td></tr>`).join('')}
+        <div><h4 class="eg" style="margin-top:0">Erros mais frequentes da turma</h4>${errProfileHTML(EPall,{top:5,noSuggest:true})}<h4 class="eg">Padrões mais falhados pela turma</h4>${weak.length?weak.map(w=>`<div class="pgw"><span>${esc(w.r.nm)}<small>${w.s.n}× · ${Math.round(w.s.acc*100)}%</small></span></div>`).join(''):'<p class="small">—</p>'}</div></div>
+      ${rows.length?`<div class="tscroll"><table class="hist ttab"><thead><tr><th>Formando</th><th>Nível</th><th>Traçados</th><th>Classificação</th><th>Desacelerações</th><th>Patológicos</th><th>Casos reais</th><th>Acidemias com decisão</th><th>Turnos</th><th>Casos da sala</th><th>Erros mais frequentes</th><th>Última atividade</th><th></th></tr></thead><tbody>
+        ${rows.sort((a,b)=>(b.last||0)-(a.last||0)).map(r=>`<tr><td><b>${esc(r.nome)}</b></td><td><span class="lvchip l${r.S.lvl}">${r.S.lvl} · ${LEVELS[r.S.lvl-1].nm}</span></td><td class="n">${r.S.N}</td><td class="n">${r.S.n?pc(r.S.f.figo):'—'}</td><td class="n">${r.S.n?pc(r.S.f.dec):'—'}</td><td class="n">${pc(r.S.sevAcc)}</td><td class="n">${r.C.n}</td><td class="n">${r.C.ac?`${r.C.acD}/${r.C.ac}`:'—'}</td><td class="n">${r.T.length?`${r.T.length} · média ${Math.round(r.T.reduce((s,x)=>s+x.score,0)/r.T.length)}`:'—'}</td><td class="n">${r.SL.length?`${r.SL.length} · média ${Math.round(r.SL.reduce((s,x)=>s+x.score,0)/r.SL.length)}`:'—'}</td><td class="small">${r.EP.rows.slice(0,2).map(x=>ERR[x.k].l).join('; ')||'—'}</td><td>${fmtD(r.last)}</td><td><button class="linkbtn" data-rm="${r.u}">Remover</button></td></tr>`).join('')}
       </tbody></table></div>`:'<p class="small">Ainda ninguém entrou. Mostre o QR code ou partilhe o código.</p>'}</div>`;
     $('tRef').onclick=()=>turmaOpen(id);
-    $('tCsv').onclick=()=>{const L=[['Formando','Nível','Traçados','Classificação %','Desacelerações %','Patológicos %','Casos reais','Acidemias com decisão','Acidemias','Turnos','Média dos turnos','Última atividade']].concat(rows.map(r=>[r.nome,r.S.lvl,r.S.N,r.S.n?Math.round(r.S.f.figo*100):'',r.S.n?Math.round(r.S.f.dec*100):'',r.S.sevAcc==null?'':Math.round(r.S.sevAcc*100),r.C.n,r.C.acD,r.C.ac,r.T.length,r.T.length?Math.round(r.T.reduce((s,x)=>s+x.score,0)/r.T.length):'',r.last?new Date(r.last).toISOString().slice(0,10):'']));
+    $('tCsv').onclick=()=>{const L=[['Formando','Nível','Traçados','Classificação %','Desacelerações %','Patológicos %','Casos reais','Acidemias com decisão','Acidemias','Turnos','Média dos turnos','Casos da sala','Média dos casos','Erros mais frequentes','Última atividade']].concat(rows.map(r=>[r.nome,r.S.lvl,r.S.N,r.S.n?Math.round(r.S.f.figo*100):'',r.S.n?Math.round(r.S.f.dec*100):'',r.S.sevAcc==null?'':Math.round(r.S.sevAcc*100),r.C.n,r.C.acD,r.C.ac,r.T.length,r.T.length?Math.round(r.T.reduce((s,x)=>s+x.score,0)/r.T.length):'',r.SL.length,r.SL.length?Math.round(r.SL.reduce((s,x)=>s+x.score,0)/r.SL.length):'',r.EP.rows.slice(0,3).map(x=>ERR[x.k].l).join('; '),r.last?new Date(r.last).toISOString().slice(0,10):'']));
       const csv='﻿'+L.map(x=>x.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`turma-${t.codigo}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
     $('tDel').onclick=async e=>{const b=e.target;if(!b.dataset.c){b.dataset.c=1;b.textContent='Confirmar: apagar a turma';return}
       try{await api(`turmas?id=eq.${id}`,{method:'DELETE'});ACC.cur=null;toast('Turma apagada. Os formandos mantêm o seu progresso.');showTurmas()}catch(x){toast(x.message)}};

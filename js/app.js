@@ -157,7 +157,7 @@ function submitReview(){
   add('Interpretação',MECH_L[ans.mech],t.mech.map(m=>MECH_L[m]).join(' ou '),t.mech.includes(ans.mech));
   add('Plano',PLAN_L[ans.plan],t.plan.map(m=>PLAN_L[m]).join(' ou '),t.plan.includes(ans.plan));
   const score=fields.reduce((s,f)=>s+(f.ok?1:(f.part||0)),0);
-  sim.reviews.push({clock:sim.clock(),tm:sim.tmin(),fields,score,max:fields.length});
+  sim.reviews.push({clock:sim.clock(),tm:sim.tmin(),fields,score,max:fields.length,ans,truthFigo:t.figo});
   sim.msg('Revisão do CTG',`Revisão estruturada registada: ${FIGO_L[ans.figo].toLowerCase()}, ${MECH_L[ans.mech].toLowerCase()}; plano: ${PLAN_L[ans.plan].toLowerCase()}.`,{kind:'sys'});
   if(sim.mode==='formacao'){
     $('mBody').innerHTML=`<p><b>${num(score,1)} / ${fields.length}</b> parâmetros corretos.</p>`+reviewTable(fields);
@@ -173,7 +173,9 @@ function alarmSummary(sim){const L=sim.e._alog||[];if(!L.length)return'<p class=
 function showDebrief(){
   const sim=W.sim,cs=sim.cs,o=sim.outcome,ev=evaluate(sim);
   $('modal').classList.remove('on');$('wRun').style.display='none';$('wPauseBar').classList.remove('on');
-  const hist=store('ctg-hist')||[];hist.push({d:new Date().toISOString(),id:cs.id,nome:cs.nome,mode:sim.mode,score:ev.score,pHa:o.born?o.pHa:null,via:o.label});store('ctg-hist',hist.slice(-200));
+  const errs=typeof errsFromCase==='function'?errsFromCase(sim,ev):[];
+  const hrec={d:new Date().toISOString(),t:Date.now(),k:'sala',id:cs.id,nome:cs.nome,mode:sim.mode,score:ev.score,pHa:o.born?o.pHa:null,via:o.label,errs:errs.map(e=>e.c),nrev:sim.reviews.length};
+  const hist=store('ctg-hist')||[];hist.push(hrec);store('ctg-hist',hist.slice(-200));if(typeof accPush==='function')accPush('caso',hrec);
   const cls=v=>v==null?'':v<7.0?'bad':v<7.1?'warn':v<7.2?'warn':'good';
   const tiles=o.born?[
     ['Via de parto',o.label.replace(/ \(.*\)/,''),o.label.match(/\((.*)\)/)?.[1]||''],['Nascimento',o.clock,`${Math.round(o.tm)} min de caso`],['Apgar',`${o.a1}/${o.a5}`,'1.º / 5.º minuto'],
@@ -190,6 +192,8 @@ function showDebrief(){
      <div class="legend"><span><i style="background:rgba(194,59,50,.18)"></i>Patológico (FIGO)</span><span><i style="background:rgba(194,122,18,.16)"></i>Suspeito</span><span><i style="background:#0098BC"></i>Ações numeradas</span>${cs.fet.mhrCapture?'<span><i style="background:#2E8B57"></i>FCF real (tracejado verde)</span>':''}<span><i style="background:#C23B32"></i>FC materna (quando registada)</span></div>
      <div class="longwrap"><canvas id="cvLong" style="height:400px"></canvas><canvas id="cvPH" style="height:130px"></canvas></div>
      <p class="small">Faixa inferior: pH fetal estimado pelo modelo (não visível durante o caso). Linhas a 7,20, 7,10 e 7,00.</p>${alarmSummary(sim)}</div>
+   <div class="card dsec cfsec" id="dbCF"></div>
+   <div class="card dsec" id="dbErr">${typeof errCaseHTML==='function'?errCaseHTML(errs):''}</div>
    <div class="two">
      <div class="card dsec"><h3>Critérios clínicos</h3><div class="crit">${ev.crit.map(c=>`<div><span class="${c.ok?'ok':'ko'}">${c.ok?'✓':'✗'}</span><span><b>${esc(c.k)}</b><span class="d">${esc(c.d)}</span></span></div>`).join('')}</div></div>
      <div class="card dsec"><h3>Ações (${sim.acts.length})</h3><div class="crit">${sim.acts.length?sim.acts.map(a=>`<div><span class="${a.q==='good'?'ok':a.q==='bad'?'ko':''}">${a.q==='good'?'✓':a.q==='bad'?'✗':'·'}</span><span><b>${a.n}. ${a.clock} · ${esc(a.lab)}</b><span class="d">${esc(a.why||'')}</span></span></div>`).join(''):'<p class="small">Nenhuma ação registada.</p>'}</div></div>
@@ -207,6 +211,7 @@ function showDebrief(){
   const bands=[];ev.evals.forEach(x=>{if(x.figo==='P'||x.figo==='S')bands.push({s:sim.t0+x.tm*60-75,e:sim.t0+x.tm*60+75,col:x.figo==='P'?'rgba(194,59,50,.13)':'rgba(194,122,18,.10)'})});
   drawCTG(cl,sim.e,{tEnd:sim.e.t,win:sim.e.t-Math.max(0,sim.t0-20*60),clock:t=>sim.clock(t),marks:true,labEvery:600,bands,trueF:!!cs.fet.mhrCapture});
   drawPH(cp,sim);
+  if(typeof cfMount==='function')cfMount(sim,$('dbCF'));else $('dbCF').remove();
   $('dbAgain').onclick=()=>wStart(cs.id);if(cs.ref)$('dbRef').onclick=()=>openRealRec(cs.ref);$('dbOther').onclick=()=>{$('wDeb').style.display='none';$('wPick').style.display='';renderPick()};
   window.scrollTo({top:0});
 }
@@ -222,6 +227,7 @@ function drawPH(cv,sim){
 
 /* ===================== RESULTADOS ===================== */
 function renderHist(){
+  if(typeof errRenderResults==='function')errRenderResults();
   const h=(store('ctg-hist')||[]).slice().reverse();
   $('hTable').innerHTML=h.length?`<table class="hist"><thead><tr><th>Data</th><th>Caso</th><th>Modo</th><th>Desfecho</th><th>pH artéria</th><th>Pontuação</th></tr></thead><tbody>${h.map(x=>`<tr><td class="n">${new Date(x.d).toLocaleString('pt-PT',{dateStyle:'short',timeStyle:'short'})}</td><td>${esc(x.nome)}</td><td>${x.mode==='formacao'?'Formação':'Avaliação'}</td><td>${esc(x.via)}</td><td class="n">${x.pHa!=null?num(x.pHa,2):'—'}</td><td class="n"><b>${x.score}</b></td></tr>`).join('')}</tbody></table>`:'<p class="small">Ainda não há casos concluídos.</p>';
   const x=(store('ctg-exam')||[]).slice().reverse();

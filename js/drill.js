@@ -213,7 +213,7 @@ function checkDrill(){
   if(D.done)return;const a=readForm();if(!a){$('xMsg').textContent='Responda a todos os campos.';return}
   const {res,ok}=evalAns(D.cur,a,D.guide);markForm(D.cur,a,res,D.guide);
   const cf=document.querySelector('input[name=xConf]:checked');document.querySelectorAll('input[name=xConf]').forEach(i=>i.disabled=true);
-  if(typeof progRecord==='function'){progRecord({r:D.cur.rec.id,g:D.guide,k:D.cur.truth.cls[D.guide],c:cf?+cf.value:null,res});renderProg()}
+  if(typeof progRecord==='function'){progRecord({r:D.cur.rec.id,g:D.guide,k:D.cur.truth.cls[D.guide],a:a.figo,c:cf?+cf.value:null,res});renderProg()}
   D.done=true;D.n++;D.tot+=7;D.ok+=ok;D.streak=res.figo?D.streak+1:0;
   $('dN').textContent=D.n;$('dPct').textContent=Math.round(D.ok/D.tot*100)+'%';$('dStreak').textContent=D.streak;$('xMsg').textContent='';
   renderExpl(D.cur,a,res,D.guide);$('dLayers').style.display='';syncLayers();drawDrill();
