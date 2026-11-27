@@ -154,7 +154,7 @@ function accModal(tab,withCode){
         <p class="ferr" id="accErr" role="alert"></p>
         <button class="btn pri" type="submit" id="accGo">${tab==='in'?'Entrar':'Criar conta'}</button>
       </form>
-      ${tab==='in'?'<p class="small"><button class="linkbtn" data-t="reset">Esqueci-me da palavra-passe</button></p>':''}
+      ${tab==='in'&&CTG_CONFIG.recuperar?'<p class="small"><button class="linkbtn" data-t="reset">Esqueci-me da palavra-passe</button></p>':''}
       <p class="small">${tab==='in'?'Ainda não tem conta? <button class="linkbtn" data-t="up">Criar conta</button>':'Já tem conta? <button class="linkbtn" data-t="in">Entrar</button>'}</p>
       ${tab==='up'?'<p class="small accnote">Guardamos o nome, o email e as respostas. O formador das turmas a que aderir vê o seu nome e o seu desempenho. Pode apagar o progresso a qualquer momento no painel de progresso.</p>':''}</div>`;
     m.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>accModal(b.dataset.t,withCode));
