@@ -101,13 +101,46 @@ function accModal(tab,withCode){
   if(!m){m=document.createElement('div');m.id='accModal';m.className='accm';document.body.appendChild(m);
     m.addEventListener('click',e=>{if(e.target===m)accClose()});document.addEventListener('keydown',e=>{if(e.key==='Escape')accClose()})}
   m.classList.add('on');
-  if(ACC.user){
+  if(ACC.user&&tab!=="newpw"){
     m.innerHTML=`<div class="accbox" role="dialog" aria-modal="true" aria-labelledby="accH"><button class="accx" aria-label="Fechar">×</button>
       <h2 id="accH">${esc(ACC.nome)}</h2><p class="small">${esc(ACC.user.email)}</p><p class="small" id="accSync"></p>
       <div class="accrow"><a class="btn pri" href="#turmas" id="accGoT">As minhas turmas</a><button class="btn" id="accOut">Sair</button></div>
       <p class="small accnote">Ao sair, o progresso deixa de aparecer neste browser; fica guardado na conta.</p></div>`;
     accStatus();$('accOut').onclick=async()=>{await ACC.sb.auth.signOut();['ctg-prog','ctg-real-live','ctg-real','ctg-turno'].forEach(k=>store(k,[]));accRefreshViews();accClose();toast('Sessão terminada.')};
     $('accGoT').onclick=()=>accClose();
+  }else if(tab==='reset'){
+    m.innerHTML=`<div class="accbox" role="dialog" aria-modal="true" aria-labelledby="accH"><button class="accx" aria-label="Fechar">×</button>
+      <h2 id="accH">Recuperar a palavra-passe</h2>
+      <p class="small">Escreva o email da conta. Enviamos um link para definir uma palavra-passe nova; o link é válido durante 1 hora.</p>
+      <form id="accF" novalidate><label class="fld">Email<input name="email" type="email" autocomplete="email" required></label>
+        <p class="ferr" id="accErr" role="alert"></p><p class="small fokmsg" id="accOk" role="status"></p>
+        <button class="btn pri" type="submit" id="accGo">Enviar link</button></form>
+      <p class="small"><button class="linkbtn" data-t="in">Voltar a entrar</button></p>
+      <p class="small accnote">Se não encontrar o email, veja na pasta de spam ou de promoções.</p></div>`;
+    m.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>accModal(b.dataset.t,withCode));
+    $('accF').onsubmit=async e=>{e.preventDefault();const email=e.target.email.value.trim(),err=$('accErr'),ok=$('accOk'),go=$('accGo');err.textContent='';ok.textContent='';
+      if(!/^\S+@\S+\.\S+$/.test(email)){err.textContent='Confirme o email.';return}
+      go.disabled=true;go.textContent='A enviar…';
+      try{const {error}=await ACC.sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;
+        ok.textContent='Se existir uma conta com este email, o link chega dentro de alguns minutos.';go.textContent='Enviado'}
+      catch(x){err.textContent=/rate limit|too many|seconds/i.test(String(x&&x.message))?'Já pedimos um link há pouco. Espere um minuto e tente de novo.':accErrMsg(x);go.disabled=false;go.textContent='Enviar link'}};
+    setTimeout(()=>{const i=m.querySelector('input');if(i)i.focus()},30);
+  }else if(tab==='newpw'){
+    m.innerHTML=`<div class="accbox" role="dialog" aria-modal="true" aria-labelledby="accH"><button class="accx" aria-label="Fechar">×</button>
+      <h2 id="accH">Palavra-passe nova</h2>
+      <p class="small">Defina a palavra-passe que vai passar a usar nesta conta.</p>
+      <form id="accF" novalidate>
+        <label class="fld">Palavra-passe nova<input name="pw" type="password" autocomplete="new-password" minlength="8" required><small>Pelo menos 8 caracteres.</small></label>
+        <label class="fld">Repita a palavra-passe<input name="pw2" type="password" autocomplete="new-password" minlength="8" required></label>
+        <p class="ferr" id="accErr" role="alert"></p>
+        <button class="btn pri" type="submit" id="accGo">Guardar</button></form></div>`;
+    $('accF').onsubmit=async e=>{e.preventDefault();const f=e.target,err=$('accErr'),go=$('accGo');err.textContent='';
+      if(f.pw.value.length<8){err.textContent='A palavra-passe precisa de pelo menos 8 caracteres.';return}
+      if(f.pw.value!==f.pw2.value){err.textContent='As duas palavras-passe não coincidem.';return}
+      go.disabled=true;go.textContent='Um momento…';
+      try{const {error}=await ACC.sb.auth.updateUser({password:f.pw.value});if(error)throw error;ACC.recovery=false;accClose();toast('Palavra-passe alterada.')}
+      catch(x){err.textContent=/session|expired|jwt/i.test(String(x&&x.message))?'O link expirou. Peça um novo em «Esqueci-me da palavra-passe».':accErrMsg(x);go.disabled=false;go.textContent='Guardar'}};
+    setTimeout(()=>{const i=m.querySelector('input');if(i)i.focus()},30);
   }else{
     tab=tab||'in';
     m.innerHTML=`<div class="accbox" role="dialog" aria-modal="true" aria-labelledby="accH"><button class="accx" aria-label="Fechar">×</button>
@@ -121,6 +154,7 @@ function accModal(tab,withCode){
         <p class="ferr" id="accErr" role="alert"></p>
         <button class="btn pri" type="submit" id="accGo">${tab==='in'?'Entrar':'Criar conta'}</button>
       </form>
+      ${tab==='in'?'<p class="small"><button class="linkbtn" data-t="reset">Esqueci-me da palavra-passe</button></p>':''}
       <p class="small">${tab==='in'?'Ainda não tem conta? <button class="linkbtn" data-t="up">Criar conta</button>':'Já tem conta? <button class="linkbtn" data-t="in">Entrar</button>'}</p>
       ${tab==='up'?'<p class="small accnote">Guardamos o nome, o email e as respostas. O formador das turmas a que aderir vê o seu nome e o seu desempenho. Pode apagar o progresso a qualquer momento no painel de progresso.</p>':''}</div>`;
     m.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>accModal(b.dataset.t,withCode));
@@ -259,7 +293,7 @@ function accInit(){
   document.body.classList.add('contas');
   ACC.sb=window.supabase.createClient(CTG_CONFIG.supabaseUrl,CTG_CONFIG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'ctg-auth'}});
   $('accBtn').onclick=()=>accModal();
-  ACC.sb.auth.onAuthStateChange((ev,session)=>{setTimeout(()=>{const first=!ACC.ready;ACC.ready=true;accSetUser(session?session.user:null,first)},0)});
+  ACC.sb.auth.onAuthStateChange((ev,session)=>{setTimeout(()=>{const first=!ACC.ready;ACC.ready=true;accSetUser(session?session.user:null,first);if(ev==='PASSWORD_RECOVERY'){ACC.recovery=true;accModal('newpw')}},0)});
   accHeader();
   window.addEventListener('online',accFlush);
 }

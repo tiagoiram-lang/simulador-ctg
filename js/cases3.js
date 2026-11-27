@@ -85,7 +85,7 @@ CASES.push(
   ],
   eco:'Feto cefálico, peso estimado 2250 g, líquido normal.',
   ideal:['Relacionar a variabilidade reduzida e a diminuição das acelerações com a betametasona (efeito transitório de 2 a 3 dias após a administração)','Num feto de 34 semanas, uma linha de base de 150 bpm é normal','Manter vigilância; procurar desacelerações e subida da linha de base, que não se explicam pelo corticoide'],
-  teach:['Os corticoides reduzem transitoriamente a variabilidade e os movimentos fetais, sobretudo no 2.º e 3.º dia','Abaixo das 32 semanas os critérios de interpretação mudam: acelerações menores e mais variabilidade de base são esperadas']
+  teach:['Os corticoides reduzem transitoriamente a variabilidade e os movimentos fetais, sobretudo no 2.º e 3.º dia','Abaixo das 32 semanas os critérios mudam: linha de base mais alta, acelerações menores (10 bpm durante 10 s) e variabilidade um pouco menor são esperadas']
 },
 {
   id:'marisa', nome:'Marisa Coelho', idade:34, gp:'G2P1', ig:'39+2', dif:'Avançado',
@@ -101,7 +101,7 @@ CASES.push(
     {at:16,fn:s=>s.rupture(true)},
   ],
   eco:'Feto cefálico, FCF compatível com o traçado. Vasos fetais a atravessar as membranas junto ao colo.',
-  ideal:['Rotura de membranas com líquido hemático numa mãe estável e sem dor, seguida de taquicardia e depois bradicardia fetal: suspeitar de rotura de vasa prévia (hemorragia fetal, não materna)','Decidir cesariana emergente de imediato; não esperar por testes de sangue fetal','Avisar a neonatologia para transfusão do recém-nascido'],
+  ideal:['Rotura de membranas com líquido hemático numa mãe estável e sem dor, seguida em poucos minutos de bradicardia fetal: suspeitar de rotura de vasa prévia (hemorragia fetal, não materna)','Decidir cesariana emergente de imediato; não esperar por testes de sangue fetal','Avisar a neonatologia para transfusão do recém-nascido'],
   teach:['Na rotura de vasa prévia o sangue que se perde é do feto, que tem cerca de 250 mL de volume sanguíneo: minutos contam','O que distingue do descolamento: mãe sem dor, útero mole e sinais vitais normais','O diagnóstico pré-natal (Doppler de vasos sobre o colo quando há placenta baixa, lobo acessório ou inserção velamentosa) muda o prognóstico']
 },
 {
