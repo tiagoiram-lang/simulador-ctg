@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador CTG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Cardiotocografia <span>· para além da linha</span></h1>
+    <p>Simulador de vigilância fetal intraparto · FIGO 2015 e abordagem fisiológica</p>
+  </div>
+  <nav id="nav">
+    <a href="#sala" data-v="sala" class="on">Sala de partos</a>
+    <a href="#treino" data-v="treino">Treino rápido</a>
+    <a href="#reais" data-v="reais">Traçados reais</a>
+    <a href="#demo" data-v="monitor">Demonstração</a>
+    <a href="#construtor" data-v="construtor">Construtor</a>
+    <a href="#referencia" data-v="referencia">Referência FIGO</a>
+    <a href="#resultados" data-v="resultados">Resultados</a>
+    <a href="#sobre" data-v="sobre">Sobre</a>
+    <button class="fsbtn" id="fsBtn" type="button" aria-pressed="false" title="Mostrar a plataforma em ecrã inteiro">⛶ Ecrã inteiro</button>
+  </nav>
+</header>
+<main>
+
+<!-- ============ SALA DE PARTOS ============ -->
+<section class="view on" id="v-sala">
+  <!-- escolha do caso -->
+  <div id="wPick">
+    <div class="card pickhead">
+      <div>
+        <h2 style="font-size:19px">Escolha uma parturiente</h2>
+        <p>Cada caso decorre em tempo simulado. Leia a ficha, vigie o CTG, responda às mensagens da equipa, faça revisões estruturadas do traçado e tome decisões. O estado fetal evolui com as suas ações; no fim recebe a gasimetria do cordão e uma análise detalhada.</p>
+      </div>
+      <div class="opts">
+        <div class="row"><b>Modo</b>
+          <label class="o"><input type="radio" name="wMode" value="formacao" checked> Formação</label>
+          <label class="o"><input type="radio" name="wMode" value="avaliacao"> Avaliação</label>
+        </div>
+        <div class="small" id="wModeTxt">Formação: comentário imediato a cada ação e revisão.</div>
+        <label class="row"><input type="checkbox" id="wPauseOpt" checked> Pausar quando a equipa chama</label>
+      </div>
+    </div>
+    <div class="cases" id="wCases"></div>
+  </div>
+
+  <!-- caso em curso -->
+  <div id="wRun" style="display:none">
+    <div class="card wtop">
+      <div class="who"><h2 id="wName"></h2><div id="wMeta"></div></div>
+      <div class="seg" id="wSpeed"><button data-s="1">×1</button><button data-s="10">×10</button><button data-s="30" class="on">×30</button><button data-s="60">×60</button><button data-s="120">×120</button></div>
+      <button class="btn" id="wPlay">Pausar</button>
+      <button class="btn pri" id="wReview">Revisão do CTG</button>
+      <button class="btn" id="wQuit">Terminar caso</button>
+      <div class="wclock"><span id="wClock">--:--</span><small id="wElapsed"></small></div>
+    </div>
+    <div class="pausebar" id="wPauseBar"><div class="tx" id="wPauseTx"></div><button class="btn pri" id="wPauseRev">Fazer revisão do CTG</button><button class="btn" id="wResume">Continuar</button></div>
+    <div class="decbar" id="wDecBar"></div>
+    <div class="wgrid">
+      <div class="stage">
+        <div class="card panel"><h3>Estado atual</h3><dl class="kv" id="wState"></dl></div>
+        <div class="card panel"><h3>Sinais vitais</h3><div class="vit" id="wVit"></div></div>
+        <div class="card panel ficha" id="wFicha"></div>
+      </div>
+      <div class="stage">
+        <div class="monitor">
+          <div class="mhead">
+            <div class="dig fcf"><div class="k">FCF</div><div class="v" id="dFcf">---</div></div>
+            <div class="dig fcm"><div class="k">FC materna</div><div class="v" id="dFcm">---</div></div>
+            <div class="dig toco"><div class="k">TOCO</div><div class="v" id="dToco">--</div></div>
+            <div class="dig sig"><div class="k">Sinal fetal</div><div class="v" id="dSig">Ultrassons</div></div>
+          </div>
+          <div class="paper"><canvas class="wctg" id="cvW" aria-label="Traçado CTG em curso"></canvas></div>
+          <div class="scrub"><span>Rever o papel</span><input type="range" id="wBack" min="0" max="0" value="0" step="1" aria-label="Recuar no papel"><span class="live" id="wBackTx">em tempo real</span><span>Janela</span><div class="seg" id="wWin"><button data-w="10">10</button><button data-w="20" class="on">20</button><button data-w="40">40 min</button></div></div>
+        </div>
+        <div class="card panel"><h3>Registo da sala</h3><div class="feed" id="wFeed"></div></div>
+      </div>
+      <div class="card panel wact">
+        <h3>Ações</h3>
+        <div id="wActs"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- relatório -->
+  <div id="wDeb" style="display:none"></div>
+</section>
+
+<!-- ============ TRAÇADOS REAIS ============ -->
+<section class="view" id="v-reais">
+  <div class="card qhead" style="margin-bottom:12px">
+    <div><h2 style="margin:0">Traçados reais anonimizados</h2><div class="small">134 partos da base CTU-UHB (Hospital Universitário de Brno), com o desfecho neonatal real. Sinal reduzido a 1 amostra por segundo.</div></div>
+    <div class="seg" id="rMode"><button data-m="lib" class="on">Biblioteca</button><button data-m="ch">Desafio: adivinhe o desfecho</button></div>
+  </div>
+  <div class="card notes" id="rLoad" style="display:none"></div>
+  <div id="rBody" style="display:none">
+    <div id="rLib" class="rlib">
+      <div class="card panel">
+        <h3>Filtros</h3><div class="rfil" id="rlFilters"></div>
+        <div class="small" id="rlCount" style="margin:8px 0 6px"></div>
+        <div class="rlist" id="rlList"></div>
+      </div>
+      <div class="stage">
+        <div class="card panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><h2 id="rlTitle" style="margin:0"></h2><span class="small" id="rlSub"></span></div><div class="cchips" id="rlChips"></div></div>
+        <div class="card paperwrap"><canvas class="ctg" id="cvReal" aria-label="Traçado real"></canvas>
+          <div class="scrub light"><span>Recuar no registo</span><input type="range" id="rlPos" min="0" max="0" value="0"><span class="mono" id="rlPosTx"></span><span>Janela</span><div class="seg" id="rlWin"><button data-w="10">10</button><button data-w="20" class="on">20</button><button data-w="40">40</button><button data-w="90">90 min</button></div><button class="btn sm" id="rlAuto" title="Linha de base e desacelerações detetadas automaticamente">Análise automática</button></div><div class="small" id="rlAutoTx" style="display:none;padding:6px 4px 0">Análise automática: tracejado azul = linha de base estimada (mediana móvel de 10 min); zonas laranja = desacelerações detetadas (descida ≥15 bpm durante ≥15 s), com a profundidade em bpm. É uma medição por algoritmo, sujeita a erros sobretudo com perdas de sinal.</div></div>
+        <div class="card panel" id="rlOut"></div>
+      </div>
+    </div>
+    <div id="rCh" style="display:none">
+      <div class="drill">
+        <div class="stage">
+          <div class="card panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h2 id="rcTitle" style="margin:0"></h2><div class="seg" id="rcWin"><button data-w="30" class="on">30 min</button><button data-w="60">60 min</button></div></div><div class="small" id="rcSub"></div><div class="cchips" id="rcChips"></div></div>
+          <div class="card qtrace"><canvas class="static" id="cvRealC" aria-label="Traçado real do desafio"></canvas></div>
+          <div class="card expl" id="rcOut"></div>
+          <div class="card notes" id="rcStats"></div>
+        </div>
+        <div class="card dform" id="rcForm"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TREINO RÁPIDO ============ -->
+<section class="view" id="v-treino">
+  <div id="liveBox" style="display:none"></div>
+  <div class="drill" id="dWrap">
+    <div class="stage">
+      <div class="card qhead"><div><h2 id="dTitle">Treino rápido</h2><div class="small" id="dCtx"></div></div><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div class="seg" id="dMode"><button data-m="livre" class="on">Treino livre</button><button data-m="exame">Exame</button></div><div class="dstats" id="dStatsLivre"><span>Traçados <b id="dN">0</b></span><span>Acertos <b id="dPct">—</b></span><span>Sequência <b id="dStreak">0</b></span></div></div></div>
+      <div class="card qtrace"><div class="layers" id="dLayers" style="display:none"><span class="small">Anotações no traçado:</span><button data-l="base">Linha de base</button><button data-l="var">Variabilidade</button><button data-l="acc">Acelerações</button><button data-l="dec">Desacelerações</button><button data-l="cont">Contrações</button><button data-all="1">Mostrar tudo</button></div><canvas class="static" id="cvD" aria-label="Traçado para classificar"></canvas></div>
+      <div class="expl card" id="dExpl"></div>
+    </div>
+    <div class="card dform" id="dForm"></div>
+  </div>
+</section>
+
+<section class="view" id="v-monitor">
+  <div class="mon">
+    <div class="card scen" id="scenList" aria-label="Cenários"></div>
+    <div class="stage">
+      <div class="card vign"><h2 id="scTitle"></h2><p id="scText"></p></div>
+      <div class="tiles">
+        <div class="card tile"><div class="k">FCF registada</div><div class="v" id="rFcf">—</div></div>
+        <div class="card tile"><div class="k">Linha de base</div><div class="v" id="rBase">—</div></div>
+        <div class="card tile" id="tCont"><div class="k">Contrações/10 min</div><div class="v" id="rCont">—</div></div>
+        <div class="card tile" id="tDec"><div class="k">Desaceleração</div><div class="v" id="rDec">—</div></div>
+        <div class="card tile"><div class="k">Tempo de cenário</div><div class="v" id="rTime">—</div></div>
+      </div>
+      <div class="card guide" id="guide">
+        <b>Desaceleração prolongada em curso.</b> Regra 3-6-9-12-15 (CTG fisiológico): a variabilidade mantida nos primeiros 3 minutos favorece a recuperação.
+        <div class="rule" id="rule">
+          <div data-m="3"><b>3 min</b>Pedir ajuda e procurar a causa</div>
+          <div data-m="6"><b>6 min</b>Sem recuperação: transferir para o bloco</div>
+          <div data-m="9"><b>9 min</b>Sem recuperação: decidir o parto</div>
+          <div data-m="12"><b>12 min</b>Extração fetal</div>
+          <div data-m="15"><b>15 min</b>Nascimento</div>
+        </div>
+      </div>
+      <div class="card paperwrap">
+        <canvas class="ctg" id="cvMon" aria-label="Traçado cardiotocográfico simulado"></canvas>
+        <div class="endcard" id="endcard"><div><h2 id="endT"></h2><p id="endP"></p><button class="btn" id="endAna">Ver análise do caso</button> <button class="btn pri" id="endRe">Repetir o cenário</button></div></div>
+      </div>
+      <div class="card ctrl">
+        <button class="btn pri" id="bPlay">Pausar</button>
+        <button class="btn" id="bRestart">Reiniciar</button>
+        <span class="small">Velocidade</span>
+        <div class="seg" id="speed"><button data-s="1">×1</button><button data-s="10">×10</button><button data-s="20" class="on">×20</button><button data-s="60">×60</button></div>
+        <span class="small">Janela</span>
+        <div class="seg" id="win"><button data-w="10">10 min</button><button data-w="20" class="on">20 min</button><button data-w="40">40 min</button></div>
+        <span class="small" style="margin-left:auto">Papel a 1 cm/min · FCF 50–210 bpm · faixa 110–160 sombreada</span>
+      </div>
+    </div>
+    <div class="card act">
+      <div><h3>Responder</h3><div class="acts" id="acts"></div></div>
+      <div><h3>Registo de ações</h3><div class="log" id="log"><div class="empty">Ainda sem ações. Observe o traçado e escolha uma intervenção.</div></div></div>
+      <div class="ana" id="ana"><button class="btn" id="bAna">Mostrar análise do caso</button><div class="body" id="anaBody"></div></div>
+    </div>
+  </div>
+</section>
+<section class="view" id="v-construtor">
+  <div class="build">
+    <div class="card sliders" id="sliders">
+      <h3>Parâmetros</h3>
+      <div class="sl"><label for="sBase">Linha de base <span id="vBase"></span></label><input type="range" id="sBase" min="60" max="200" value="140"></div>
+      <div class="sl"><label for="sVar">Variabilidade (amplitude) <span id="vVar"></span></label><input type="range" id="sVar" min="0" max="35" value="12"></div>
+      <label class="chk"><input type="checkbox" id="sSin"> Padrão sinusoidal (10 bpm, 4 ciclos/min)</label>
+      <div class="sl"><label for="sAcc">Acelerações por hora <span id="vAcc"></span></label><input type="range" id="sAcc" min="0" max="20" value="8"></div>
+      <label class="chk"><input type="checkbox" id="sCyc"> Ciclicidade (alternância sono/vigília)</label>
+      <div class="sl"><label for="sCn">Contrações em 10 min <span id="vCn"></span></label><input type="range" id="sCn" min="0" max="8" step="0.5" value="3"></div>
+      <div class="sl"><label for="sCd">Duração da contração <span id="vCd"></span></label><input type="range" id="sCd" min="40" max="150" value="70"></div>
+      <div class="sl"><label for="sCa">Intensidade da contração <span id="vCa"></span></label><input type="range" id="sCa" min="15" max="90" value="50"></div>
+      <div class="sl"><label for="sTone">Tónus basal <span id="vTone"></span></label><input type="range" id="sTone" min="5" max="50" value="12"></div>
+      <div class="sl"><label for="sDt">Tipo de desaceleração</label>
+        <select id="sDt"><option value="none">Nenhuma</option><option value="early">Precoce</option><option value="late">Tardia</option><option value="variable">Variável</option><option value="subacute">Subaguda (&gt;90 s)</option></select></div>
+      <div class="sl"><label for="sDp">Frequência (% das contrações) <span id="vDp"></span></label><input type="range" id="sDp" min="0" max="100" step="5" value="0"></div>
+      <div class="sl"><label for="sDd">Profundidade <span id="vDd"></span></label><input type="range" id="sDd" min="10" max="80" value="35"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn" id="bPro">Desaceleração prolongada</button>
+        <button class="btn" id="bRec">Recuperar</button>
+        <button class="btn" id="bMhr">Mostrar FC materna</button>
+        <button class="btn" id="bReset">Repor traçado normal</button>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="card paperwrap"><canvas class="ctg" id="cvBuild" aria-label="Traçado do construtor"></canvas></div>
+      <div class="card figo" id="figoBox"></div>
+    </div>
+  </div>
+</section>
+<section class="view" id="v-referencia">
+  <div class="ref">
+    <div class="card tbl">
+      <table class="figot">
+        <thead><tr><th>FIGO 2015</th><th class="N">Normal</th><th class="S">Suspeito</th><th class="P">Patológico</th></tr></thead>
+        <tbody>
+          <tr><td>Linha de base</td><td>110–160 bpm</td><td rowspan="3">Falta pelo menos uma característica de normalidade, sem critérios de patológico</td><td>&lt;100 bpm</td></tr>
+          <tr><td>Variabilidade</td><td>5–25 bpm</td><td>Reduzida, aumentada ou padrão sinusoidal</td></tr>
+          <tr><td>Desacelerações</td><td>Sem desacelerações repetitivas</td><td>Tardias ou prolongadas repetitivas durante &gt;30 min (ou &gt;20 min se variabilidade reduzida), ou uma desaceleração prolongada &gt;5 min</td></tr>
+          <tr><td>Interpretação</td><td>Feto sem hipoxia/acidose</td><td>Baixa probabilidade de hipoxia/acidose</td><td>Elevada probabilidade de hipoxia/acidose</td></tr>
+          <tr><td>Atuação</td><td>Sem intervenção para melhorar a oxigenação fetal</td><td>Corrigir causas reversíveis, vigilância apertada ou métodos adicionais de avaliação</td><td>Ação imediata sobre causas reversíveis, métodos adicionais ou, se não for possível, acelerar o parto. Em situações agudas (prolapso do cordão, rotura uterina, descolamento da placenta), parto imediato</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card notes">
+      <h3>Definições usadas no simulador</h3>
+      <ul>
+        <li><b>Repetitivas:</b> desacelerações associadas a mais de 50% das contrações.</li>
+        <li><b>Variabilidade reduzida:</b> &lt;5 bpm durante &gt;50 min nos segmentos de linha de base, ou &gt;3 min durante desacelerações. <b>Aumentada:</b> &gt;25 bpm durante &gt;30 min.</li>
+        <li><b>Padrão sinusoidal:</b> ondulação regular e suave, amplitude 5–15 bpm, 3–5 ciclos/min, durante &gt;30 min, sem acelerações.</li>
+        <li><b>Aceleração:</b> subida ≥15 bpm durante ≥15 s. A presença de acelerações indica feto sem hipoxia/acidose; a ausência no trabalho de parto tem significado incerto.</li>
+        <li><b>Desaceleração:</b> descida ≥15 bpm durante ≥15 s. <b>Prolongada:</b> &gt;3 min. <b>Taquissistolia:</b> &gt;5 contrações em 10 min.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Tipos de desaceleração</h2>
+      <div class="minis">
+        <div class="card mini"><canvas id="mEarly"></canvas><p><b>Precoce.</b> Descida gradual e simétrica, nadir coincidente com o pico da contração. Compressão cefálica; não traduz hipoxia.</p></div>
+        <div class="card mini"><canvas id="mLate"></canvas><p><b>Tardia.</b> Descida gradual, nadir depois do pico da contração e retorno lento. Hipoxemia por insuficiência útero-placentar.</p></div>
+        <div class="card mini"><canvas id="mVar"></canvas><p><b>Variável.</b> Queda abrupta (&lt;30 s até ao nadir) e recuperação rápida. Compressão do cordão umbilical.</p></div>
+        <div class="card mini"><canvas id="mPro"></canvas><p><b>Prolongada.</b> Mais de 3 min. Acima de 5 min (ou 3 min com variabilidade reduzida) indica hipoxia aguda.</p></div>
+      </div>
+    </div>
+    <div>
+      <h2>Tipos de hipoxia (abordagem fisiológica)</h2>
+      <div class="phys">
+        <div class="card"><h3>Aguda</h3><p>Desaceleração prolongada &gt;5 min (ou &gt;3 min com variabilidade reduzida).</p><p class="small">Acidentes: prolapso do cordão, descolamento da placenta, rotura uterina. Iatrogénica: hipotensão materna, hiperestimulação. pH desce ~0,01/min.</p></div>
+        <div class="card"><h3>Subaguda</h3><p>Desacelerações profundas: o feto passa &gt;90 s em desaceleração e &lt;30 s na linha de base.</p><p class="small">Habitualmente por hiperestimulação ou puxos. pH desce ~0,01 a cada 2–3 min.</p></div>
+        <div class="card"><h3>Evolução gradual</h3><p>Resposta de stress progressiva até à descompensação.</p><p class="small">Cada passo da escada abaixo é um sinal de alarme.</p></div>
+        <div class="card"><h3>Crónica</h3><p>Linha de base no limite superior, variabilidade reduzida, sem ciclicidade, desacelerações pouco profundas.</p><p class="small">Reserva reduzida: limiar baixo para intervenção cirúrgica.</p></div>
+      </div>
+      <div class="card notes" style="margin-top:10px">
+        <h3>Hipoxia de evolução gradual: sequência</h3>
+        <div class="ladder">
+          <div><b>1</b>Desacelerações</div><div><b>2</b>Perda de acelerações</div><div><b>3</b>Subida da linha de base (catecolaminas)</div><div><b>4</b>Perda de ciclicidade</div><div><b>5</b>Redução da variabilidade</div><div><b>6</b>Bradicardia terminal</div>
+        </div>
+      </div>
+    </div>
+    <div class="card notes">
+      <h3>Intervenções sem evidência de apoio</h3>
+      <ul>
+        <li><b>Oxigénio à mãe:</b> numa mãe bem oxigenada não melhora o pH da artéria umbilical (meta-análise de 16 ensaios aleatorizados, Raghuraman et al., 2021); a ACOG desaconselha o seu uso por rotina.</li>
+        <li><b>Fluidos IV em mulheres normotensas e bem hidratadas:</b> na hipoxia crónica e na corioamnionite podem dar uma falsa sensação de segurança sem melhorar os resultados perinatais.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SOBRE ============ -->
+<section class="view" id="v-sobre">
+  <div class="ref" style="max-width:980px">
+    <div class="card notes">
+      <h2>Sobre esta plataforma</h2>
+      <p>Simulador de ensino da vigilância fetal intraparto, criado como complemento da apresentação «Cardiotocografia: para além da linha» (UFON, novembro de 2026). Junta a classificação por padrões (FIGO 2015, ACOG 2025, NICE NG229) com a interpretação fisiológica do CTG.</p>
+      <p><b>Estado da revisão clínica:</b> por validar. Os casos, os critérios de avaliação e os parâmetros do modelo devem ser revistos por profissionais de obstetrícia antes de qualquer uso formal de avaliação.</p>
+      <p class="small">Versão 5 · novembro de 2026. As doentes da Sala de partos e os traçados do Treino rápido são fictícios. O separador «Traçados reais» usa registos reais anonimizados da base pública CTU-UHB (Brno, 2010–2012), com o respetivo desfecho neonatal.</p>
+    </div>
+    <div class="card notes">
+      <h3>Como funciona o simulador</h3>
+      <ul>
+        <li><b>Traçado:</b> a FCF é gerada a partir de uma linha de base, de variabilidade (soma de oscilações de 1,5 a 7,5 ciclos por minuto), de acelerações e de desacelerações ligadas às contrações. O toco inclui tónus, contrações e puxos.</li>
+        <li><b>Fisiologia (Sala de partos):</b> um pH fetal estimado desce durante as desacelerações (cerca de 0,01 por minuto numa desaceleração profunda), durante contrações num feto com pouca reserva, e recupera entre contrações. O traçado reage ao pH: perda de acelerações abaixo de 7,25, subida da linha de base abaixo de 7,22, redução da variabilidade abaixo de 7,12 e bradicardia terminal abaixo de 7,00.</li>
+        <li><b>Desfecho:</b> pH da artéria umbilical, défice de bases, lactato e Apgar são derivados do pH final por relações aproximadas.</li>
+        <li><b>Verdade clínica:</b> a classificação «correta» é calculada a partir do que foi gerado (desacelerações registadas, contrações, durações), aplicando as regras de cada diretriz tal como estão escritas.</li>
+      </ul>
+    </div>
+    <div class="card notes">
+      <h3>Calibração com traçados reais (CTU-UHB, 552 partos)</h3>
+      <p>O motor que gera os traçados sintéticos foi ajustado para reproduzir estatísticas medidas nos 552 registos da base CTU-UHB. As medidas foram feitas automaticamente, com a mesma metodologia nos traçados reais e nos sintéticos.</p>
+      <table class="calib"><thead><tr><th>Característica</th><th>Traçados reais</th><th>Simulador</th></tr></thead><tbody>
+        <tr><td>Distribuição da energia da variabilidade (0,5–2 / 2–4 / 4–8 / 8–15 / 15–30 ciclos por minuto)</td><td class="n">50 / 22 / 18 / 7 / 3 %</td><td class="n">49 / 23 / 17 / 9 / 3 %</td></tr>
+        <tr><td>Amplitude da variabilidade por minuto (mediana; p10–p90)</td><td class="n">14 bpm (6–31)</td><td class="n">ajustada ao valor pedido (±20%)</td></tr>
+        <tr><td>Falhas de sinal com ultrassons: &lt;5 s / 5–30 s / ≥30 s</td><td class="n">74 / 23 / 3 %</td><td class="n">74 / 22 / 4 %</td></tr>
+        <tr><td>Sinal em falta na última hora (mediana)</td><td class="n">19% ultrassons · 5% elétrodo</td><td class="n">8–12% no 1.º estádio e ≈18% no expulsivo (ultrassons) · ≈1% elétrodo</td></tr>
+        <tr><td>Largura das contrações a meia altura (mediana)</td><td class="n">39 s</td><td class="n">≈37 s</td></tr>
+        <tr><td>Acelerações por hora no trabalho de parto (mediana; p75)</td><td class="n">1,7; 4,5</td><td class="n">3–8 nos traçados normais (ligeiramente acima do real, para os tornar reconhecíveis)</td></tr>
+        <tr><td>Descida do pH por 100 bpm·min de área de desacelerações na última hora</td><td class="n">≈0,011</td><td class="n">≈0,012 (modelo da Sala de partos)</td></tr>
+      </tbody></table>
+      <p class="small">Leitura importante para o ensino: na base CTU-UHB, a área de desacelerações medida automaticamente nos últimos 30–60 min distingue mal os recém-nascidos com e sem acidemia (área sob a curva ROC 0,64–0,66). Mesmo o melhor parâmetro isolado do CTG está longe de ser um teste perfeito.</p>
+    </div>
+    <div class="card notes">
+      <h3>Evidência recente incorporada</h3>
+      <ul>
+        <li><b>Área de desacelerações:</b> em vários estudos é o parâmetro isolado que melhor prediz acidemia (área sob a curva 0,76 em 8580 partos; 0,81–0,83 em estudos espanhóis). Os traçados reais mostram agora esta medida e a deteção automática das desacelerações.</li>
+        <li><b>Inteligência artificial:</b> modelos de aprendizagem profunda para prever acidemia a partir do CTG atingem áreas sob a curva de 0,74–0,83 em validação externa, e um estudo aleatorizado de 2026 mostrou melhor previsão quando os profissionais tinham apoio de CTG computorizado. Esta plataforma não usa IA para classificar; serve para treinar o olhar humano.</li>
+        <li><b>Concordância entre observadores:</b> a classificação tradicional (normal/suspeito/patológico) tem concordância baixa a moderada (kappa 0,3–0,6), uma das razões para o interesse na interpretação fisiológica.</li>
+        <li><b>Oxigénio materno:</b> sem melhoria do pH umbilical numa meta-análise de 16 ensaios; desaconselhado por rotina.</li>
+      </ul>
+    </div>
+    <div class="card notes">
+      <h3>Limitações conhecidas</h3>
+      <ul>
+        <li>O modelo de pH é simplificado e calibrado para fins didáticos; não reproduz a variabilidade biológica real nem serve para prever desfechos.</li>
+        <li>Os tempos até ao nascimento (decisão-parto) são valores típicos, não os do serviço.</li>
+        <li>Faltam artefactos reais importantes: duplicação/redução para metade da frequência, marcas de movimentos fetais e traçados de gémeos.</li>
+        <li>A classificação FIGO segue o texto à letra; na hipoxia subaguda isto dá «suspeito» quando a fisiologia indica uma situação mais grave. A explicação assinala-o.</li>
+        <li>A NICE NG229 categoriza contrações, linha de base, variabilidade e desacelerações; a subida da linha de base de 20 bpm ao longo do trabalho de parto não é avaliável num traçado isolado de 30 minutos.</li>
+      </ul>
+    </div>
+    <div class="card notes">
+      <h3>Referências</h3>
+      <ul>
+        <li>Ayres-de-Campos D, Spong CY, Chandraharan E; FIGO Intrapartum Fetal Monitoring Expert Consensus Panel. <a href="https://pubmed.ncbi.nlm.nih.gov/26433401/" target="_blank" rel="noopener">FIGO consensus guidelines on intrapartum fetal monitoring: Cardiotocography</a>. Int J Gynaecol Obstet. 2015;131(1):13-24.</li>
+        <li>American College of Obstetricians and Gynecologists. <a href="https://opqic.org/acog-clinical-practice-guideline-no-10-intrapartum-fetal-heart-rate-monitoring-interpretation-and-management/" target="_blank" rel="noopener">Clinical Practice Guideline No. 10: Intrapartum Fetal Heart Rate Monitoring: Interpretation and Management</a>. Outubro de 2025.</li>
+        <li>National Institute for Health and Care Excellence. <a href="https://www.nice.org.uk/guidance/ng229/resources/fetal-monitoring-in-labour-pdf-66143844065221" target="_blank" rel="noopener">Fetal monitoring in labour (NG229)</a>. 2022, atualizada em novembro de 2025 (desacelerações tardias passam a vermelho independentemente da duração).</li>
+        <li>Zaima A, Chandraharan E. <a href="https://www.glowm.com/article/id/415163" target="_blank" rel="noopener">Intrapartum Fetal Monitoring</a>. Glob Libr Women's Med. 2021 (inclui o consenso internacional de interpretação fisiológica do CTG, 2018).</li>
+        <li>Cahill AG, Tuuli MG, Stout MJ, López JD, Macones GA. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5916338" target="_blank" rel="noopener">A prospective cohort study of fetal heart rate monitoring: deceleration area is predictive of fetal acidemia</a>. Am J Obstet Gynecol. 2018;218(5):523.e1–12.</li>
+        <li>Esteban LM et al. <a href="https://www.pubmed.gov/38441244/" target="_blank" rel="noopener">New parameters predicting fetal acidemia: total deceleration area, reperfusion time and slope of the last deceleration</a>. Int J Gynecol Obstet. 2024;166:859–70.</li>
+        <li>Raghuraman N et al. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7783592" target="_blank" rel="noopener">Maternal oxygen supplementation compared with room air for intrauterine resuscitation: a systematic review and meta-analysis</a>. JAMA Pediatr. 2021;175(4).</li>
+        <li><a href="https://pubmed.ncbi.nlm.nih.gov/38663662/" target="_blank" rel="noopener">Intrapartum electronic fetal heart rate monitoring to predict acidemia at birth with the use of deep learning</a>. Am J Obstet Gynecol. 2025;232(1):116.e1–9 (validação externa na base CTU-UHB).</li>
+        <li><a href="https://ora.ox.ac.uk/objects/uuid:67838f94-cb8e-4ab7-b3a6-40f213b1dd79/files/r1n79h698t" target="_blank" rel="noopener">Randomised study of human machine collaboration for cardiotocography interpretation during labour</a>. npj Digit Med. 2026.</li>
+        <li>Pillai M, James D. The development of fetal heart rate patterns during normal pregnancy. Obstet Gynecol. 1990.</li>
+        <li>Fawole B, Hofmeyr GJ. Maternal oxygen administration for fetal distress. Cochrane Database Syst Rev. 2012.</li>
+        <li>Chudáček V, Spilka J, Burša M, Janků P, Hruban L, Huptych M, Lhotská L. <a href="https://www.biomedcentral.com/1471-2393/14/16" target="_blank" rel="noopener">Open access intrapartum CTG database</a>. BMC Pregnancy Childbirth. 2014;14:16. Dados: CTU-UHB Intrapartum Cardiotocography Database v1.0.0, PhysioNet (licença Open Data Commons Attribution), usados no separador «Traçados reais».</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RESULTADOS ============ -->
+<section class="view" id="v-resultados">
+  <div class="card notes">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Resultados neste browser</h2><button class="btn" id="hClear">Limpar histórico</button></div>
+    <p class="small">Os resultados ficam guardados apenas neste browser e dispositivo.</p>
+    <h3 style="margin-top:10px">Casos da sala de partos</h3>
+    <div class="tbl" id="hTable"></div>
+    <h3 style="margin-top:16px">Exames</h3>
+    <div class="tbl" id="hExam"></div>
+  </div>
+</section>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mbox"><header><h2 id="mTitle"></h2><button class="btn" id="mClose" aria-label="Fechar">Fechar</button></header><div class="mb" id="mBody"></div><div class="mf" id="mFoot"></div></div></div>
+
+<footer>Ferramenta de ensino com doentes e traçados simulados; o modelo fisiológico é simplificado. Não substitui o julgamento clínico nem os protocolos da instituição.</footer>
+<script src="js/config.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/cases.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/drill.js"></script>
+<script src="js/real.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="js/live.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
